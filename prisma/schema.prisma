@@ -63,7 +63,7 @@ model Target {
 
   // Relations
   sessions    Session[]
-  scenarios   ScenarioTarget[]
+  scenarios   Scenario[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -100,19 +100,10 @@ model Scenario {
 
   // Relations
   sessions Session[]
+  scheduledJobs ScheduledJob[]
 
   @@index([category])
   @@index([isActive])
-  @@index([targetId])
-}
-
-  // Override scenario defaults per target
-  configOverrides Json?
-
-  createdAt  DateTime @default(now())
-
-  @@unique([scenarioId, targetId])
-  @@index([scenarioId])
   @@index([targetId])
 }
 
@@ -139,10 +130,7 @@ model Session {
   logPath       String?        // Path to logs/sessions/{id}/
 
   // Summary metrics (cached from log analysis)
-  messageCount      Int?
-  totalTokens       Int?
-  avgResponseTimeMs Float?
-  errorCount        Int?
+  summaryMetrics Json?
 
   // Metrics relation
   metrics       SessionMetric[]
