@@ -1,24 +1,27 @@
-import { BaseConnector, ConnectorConfig } from "./base";
+import type { BaseConnector, ConnectorConfig } from "./base";
 import { HTTPConnector } from "./http";
+import type { ConnectorType } from "@prisma/client";
 
 /**
  * Connector Registry
  *
  * Central registry for all connector types.
- * Allows dynamic creation of connectors based on type.
+ * Provides factory methods for creating connector instances based on type.
  */
-
-export type ConnectorType = "HTTP_REST" | "WEBSOCKET" | "GRPC" | "SSE";
 
 type ConnectorConstructor = new (targetId: string, config: ConnectorConfig) => BaseConnector;
 
-class ConnectorRegistry {
-  private connectors: Map<ConnectorType, ConnectorConstructor> = new Map();
+export class ConnectorRegistry {
+  private static connectors = new Map<string, ConnectorConstructor>();
 
   /**
    * Register a connector type
    */
-  register(type: ConnectorType, connector: ConnectorConstructor): void {
+  static register(type: string, connector: ConnectorConstructor): void {
+    if (this.connectors.has(type)) {
+      console.warn(`⚠️  Connector ${type} is already registered, overwriting`);
+    }
+
     this.connectors.set(type, connector);
     console.log(`✅ Registered connector: ${type}`);
   }
@@ -26,7 +29,7 @@ class ConnectorRegistry {
   /**
    * Create a connector instance
    */
-  create(type: ConnectorType, targetId: string, config: ConnectorConfig): BaseConnector {
+  static create(type: ConnectorType, targetId: string, config: ConnectorConfig): BaseConnector {
     const ConnectorClass = this.connectors.get(type);
 
     if (!ConnectorClass) {
@@ -39,27 +42,36 @@ class ConnectorRegistry {
   /**
    * Get all registered connector types
    */
-  getRegisteredTypes(): ConnectorType[] {
+  static getRegisteredTypes(): string[] {
     return Array.from(this.connectors.keys());
   }
 
   /**
    * Check if a connector type is registered
    */
-  isRegistered(type: ConnectorType): boolean {
+  static isRegistered(type: string): boolean {
     return this.connectors.has(type);
+  }
+
+  /**
+   * Unregister a connector (primarily for testing)
+   */
+  static unregister(type: string): boolean {
+    return this.connectors.delete(type);
+  }
+
+  /**
+   * Clear all registered connectors (primarily for testing)
+   */
+  static clear(): void {
+    this.connectors.clear();
   }
 }
 
-// Singleton instance
-export const connectorRegistry = new ConnectorRegistry();
-
 // Auto-register built-in connectors
-connectorRegistry.register("HTTP_REST", HTTPConnector);
+ConnectorRegistry.register("HTTP_REST", HTTPConnector);
 
-// Placeholder registrations for connectors to be implemented
-// connectorRegistry.register("WEBSOCKET", WebSocketConnector);
-// connectorRegistry.register("GRPC", gRPCConnector);
-// connectorRegistry.register("SSE", SSEConnector);
-
-export default connectorRegistry;
+// Additional connectors will be registered when their modules are imported
+// import "./websocket";  // Auto-registers WebSocketConnector
+// import "./grpc";       // Auto-registers gRPCConnector
+// import "./sse";        // Auto-registers SSEConnector
