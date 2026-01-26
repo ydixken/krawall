@@ -94,6 +94,79 @@ git log --oneline -1  # Verify commit
 
 ---
 
+## Docker Container Management
+
+**AGENTS HAVE FULL AUTONOMY TO MANAGE DOCKER CONTAINERS AS NEEDED.**
+
+Docker is running and agents MUST use it for testing and development. Agents have full permissions to start, stop, restart, and rebuild containers without asking for user approval.
+
+### Container Management Commands
+
+Agents MUST use these commands to manage the Docker environment:
+
+1. **Start containers**: `task docker:up` or `docker-compose up -d`
+2. **Stop containers**: `task docker:down` or `docker-compose down`
+3. **Restart containers**: `task docker:restart` or `docker-compose restart`
+4. **Rebuild containers**: `task docker:build` or `docker-compose build`
+5. **View logs**: `docker-compose logs -f [service]` or `task docker:logs`
+6. **Check status**: `docker-compose ps`
+7. **Reset volumes**: `docker-compose down -v` (use with caution)
+
+### When to Manage Containers
+
+Agents MUST start containers:
+
+- Before running integration tests that require PostgreSQL or Redis
+- Before testing the complete end-to-end flow
+- After making infrastructure changes (Dockerfile, docker-compose.yml)
+- When database migrations need to be applied
+
+Agents SHOULD restart containers:
+
+- When services are not responding properly
+- After significant code changes to workers or background jobs
+- When debugging connection issues
+
+Agents SHOULD rebuild containers:
+
+- After modifying Dockerfile or docker-compose.yml
+- When dependencies are updated in package.json
+- When environment variables are changed
+
+### Service Information
+
+The Docker Compose stack includes:
+
+- **PostgreSQL**: Port 5432 - Database for persistent data
+- **Redis**: Port 6379 - Cache and job queue
+- **Redis Commander**: Port 8081 - Redis UI for debugging
+
+### Testing Requirements
+
+Agents MUST ensure containers are running before:
+
+- Running integration tests (`tests/integration/`)
+- Executing E2E tests
+- Running database migrations (`task db:migrate`)
+- Testing the session executor worker
+- Testing the /api/execute endpoint
+
+Agents SHOULD verify container health:
+
+```bash
+docker-compose ps  # Check all containers are "Up"
+task health:check  # Test application health endpoint
+```
+
+### Container Data Management
+
+- Containers persist data in Docker volumes
+- Database data survives container restarts
+- To reset database completely: `docker-compose down -v && task docker:up && task db:migrate`
+- Logs directory (`logs/sessions/`) is mounted as a bind volume
+
+---
+
 ## Implementation Milestones
 
 **CRITICAL: READ MILESTONES.md FOR COMPLETE IMPLEMENTATION PLAN**

@@ -20,6 +20,35 @@ This is a MANDATORY requirement that MUST NOT be skipped:
 3. You MUST verify the commit succeeded with `git log --oneline -1`
 4. This requirement is documented in AGENTS.md and must be followed religiously
 
+## 🐳 Docker Container Management
+
+**YOU HAVE FULL AUTONOMY TO MANAGE DOCKER CONTAINERS AS NEEDED.**
+
+Docker is running and you MUST use it for testing and development:
+
+1. **Start containers when needed**: Use `task docker:up` or `docker-compose up -d`
+2. **Stop containers when needed**: Use `task docker:down` or `docker-compose down`
+3. **Restart containers**: Use `task docker:restart` or `docker-compose restart`
+4. **Rebuild containers**: Use `task docker:build` or `docker-compose build`
+5. **View logs**: Use `docker-compose logs -f [service]`
+6. **Check status**: Use `docker-compose ps`
+
+**When to manage containers:**
+
+- Before running integration tests that require PostgreSQL or Redis
+- After making infrastructure changes (Dockerfile, docker-compose.yml)
+- When services are not responding or need a fresh state
+- When testing end-to-end flows that require the full stack
+
+**Important:**
+
+- PostgreSQL runs on port 5432
+- Redis runs on port 6379
+- Redis Commander UI runs on port 8081
+- ALWAYS ensure containers are running before tests that need database/cache
+- Use `task docker:logs` to debug container issues
+- Containers persist data in Docker volumes - use `docker-compose down -v` to reset
+
 ## 📋 Implementation Plan
 
 **READ MILESTONES.md FOR THE COMPLETE IMPLEMENTATION PLAN**

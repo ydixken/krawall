@@ -72,50 +72,39 @@ model Target {
   @@index([isActive])
 }
 
-// Scenario: Pre-configured test scenario
+/// Scenario - Test scenario definition
 model Scenario {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  category    String?  // "stress", "verbose", "edge-cases", etc.
+  category    String  @default("custom")
 
-  // Flow definition
-  flowConfig  Json     // Array of message steps, branching logic
+  // Target relationship (optional - scenarios can be reused)
+  targetId String?
+  target   Target? @relation(fields: [targetId], references: [id], onDelete: SetNull)
+
+  // Flow configuration
+  flowConfig Json // Array of flow steps
 
   // Execution parameters
-  repetitions       Int     @default(1)
-  concurrency       Int     @default(1)
-  delayBetweenMs    Int     @default(0)
-  verbosityLevel    Int     @default(1)  // 1-5 scale
+  repetitions    Int  @default(1)
+  concurrency    Int  @default(1)
+  delayBetweenMs Int  @default(0)
+  messageTemplates Json
+  verbosityLevel String @default("normal")
 
-  // Templating
-  messageTemplates  Json    // Variable message templates
+  // Status
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Targeting
-  targets    ScenarioTarget[]
-  sessions   Session[]
-  scheduledJobs ScheduledJob[]
-
-  // Metadata
-  isPublic   Boolean  @default(false)
-  tags       String[]
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  // Relations
+  sessions Session[]
 
   @@index([category])
-  @@index([isPublic])
+  @@index([isActive])
+  @@index([targetId])
 }
-
-// Many-to-many: Scenarios can target multiple chatbots
-model ScenarioTarget {
-  id         String   @id @default(cuid())
-
-  scenario   Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  scenarioId String
-
-  target     Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
-  targetId   String
 
   // Override scenario defaults per target
   configOverrides Json?
