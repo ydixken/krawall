@@ -94,6 +94,47 @@ git log --oneline -1  # Verify commit
 
 ---
 
+## Implementation Milestones
+
+**CRITICAL: READ MILESTONES.md FOR COMPLETE IMPLEMENTATION PLAN**
+
+The file [MILESTONES.md](MILESTONES.md) is the authoritative source for:
+
+1. **All 6 Milestones**: Detailed tasks, deliverables, and verification criteria
+2. **Progress Tracking**: Current status of each milestone
+3. **Technical Requirements**: Specifications for each feature
+4. **Success Criteria**: How to verify milestone completion
+5. **Git Commit Requirements**: Reminders for each milestone
+
+### When to Consult MILESTONES.md
+
+Agents MUST read MILESTONES.md when:
+- Starting work on a new milestone
+- Unsure what needs to be built next
+- Context has been compacted/summarized
+- Verifying milestone completion criteria
+- Planning work sequence
+
+### Milestone Status Tracking
+
+Current progress is maintained in MILESTONES.md:
+- ✅ Milestone 1: Foundation - **COMPLETED** (commit: 3c69255)
+- 🔄 Milestone 2: Core Features - **IN PROGRESS**
+- 📋 Milestone 3-6: Pending
+
+Always check the progress tracking table in MILESTONES.md for current status.
+
+### Critical Files for Context Recovery
+
+If context needs to be compacted, these files MUST be retained:
+- **MILESTONES.md** - Complete implementation plan
+- **AGENTS.md** - This file (behavior guidelines)
+- **CLAUDE.md** - Agent instructions
+- **README.md** - Current state documentation
+- **prisma/schema.prisma** - Data models
+
+---
+
 ## Documentation & External References
 
 ### Required Documentation Consultation

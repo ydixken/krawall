@@ -20,6 +20,25 @@ This is a MANDATORY requirement that MUST NOT be skipped:
 3. You MUST verify the commit succeeded with `git log --oneline -1`
 4. This requirement is documented in AGENTS.md and must be followed religiously
 
+## 📋 Implementation Plan
+
+**READ MILESTONES.md FOR THE COMPLETE IMPLEMENTATION PLAN**
+
+The file [MILESTONES.md](MILESTONES.md) contains:
+- All 6 milestones with detailed tasks and deliverables
+- Verification criteria for each milestone
+- Git commit requirements
+- Success criteria for project completion
+- Progress tracking table
+
+**If context needs to be compacted**, you MUST read MILESTONES.md to understand:
+- What has been completed (check progress tracking table)
+- What needs to be built next
+- Technical requirements for each feature
+- Verification steps for each milestone
+
+Current milestone status is tracked in MILESTONES.md - always check there first.
+
 ---
 
 Your task is to create a high-quality *AGENTS.md* file for this repository.
