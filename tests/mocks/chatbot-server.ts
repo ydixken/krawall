@@ -445,17 +445,8 @@ export class MockChatbotServer {
       await this.delay(10); // Minimal delay for timing assertions
     }
 
-    // Randomly simulate errors (skipped in test mode and persona modes for determinism)
-    if (!this.testMode && persona === "default" && Math.random() < 0.05) {
-      res.status(429).json({
-        error: {
-          message: "Rate limit exceeded",
-          type: "rate_limit_error",
-          code: "rate_limit_exceeded",
-        },
-      });
-      return;
-    }
+    // Note: Random 429 errors removed from default persona.
+    // Use the "rate-limited" persona explicitly to test rate limiting.
 
     // Generate response based on persona
     const response = this.generatePersonaResponse(persona, userMessage.content, session);
