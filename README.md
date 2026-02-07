@@ -234,6 +234,8 @@ All chatbot protocols extend a `BaseConnector` abstract class with a registry pa
 | `custom-websocket` | Custom WebSocket | Configurable |
 | `custom-grpc` | Custom gRPC | Configurable |
 
+Configurable presets support all authentication methods: **Bearer Token**, **API Key** (custom header name), **Basic Auth**, **Custom Headers**, and **None**.
+
 ### Worker Pipeline
 
 1. **Session Execution** - Execute test scenarios with connector lifecycle management
