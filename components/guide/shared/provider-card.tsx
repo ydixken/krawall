@@ -26,11 +26,11 @@ const PROVIDER_COLORS: Record<string, string> = {
 interface ProviderCardProps {
   preset: ProviderPreset;
   selected: boolean;
-  recommended?: boolean;
+  label?: string;
   onClick: () => void;
 }
 
-export function ProviderCard({ preset, selected, recommended, onClick }: ProviderCardProps) {
+export function ProviderCard({ preset, selected, label, onClick }: ProviderCardProps) {
   const ConnectorIcon = CONNECTOR_ICONS[preset.connectorType] || Globe;
   const color = PROVIDER_COLORS[preset.icon] || "text-gray-400";
 
@@ -52,8 +52,8 @@ export function ProviderCard({ preset, selected, recommended, onClick }: Provide
             <div className="text-sm font-medium text-gray-100">{preset.name}</div>
           </div>
         </div>
-        {recommended && (
-          <Badge variant="info" size="sm">Recommended</Badge>
+        {label && (
+          <Badge variant="info" size="sm">{label}</Badge>
         )}
       </div>
       <p className="text-xs text-gray-500 line-clamp-2">{preset.description}</p>
