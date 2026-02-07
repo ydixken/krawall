@@ -2,12 +2,35 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import {
+  Radio,
+  Target,
+  Activity,
+  Play,
+  Eye,
+  Clock,
+  MessageSquare,
+  RefreshCw,
+  Zap,
+} from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MetricCard } from "@/components/ui/metric-card";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface DashboardStats {
   totalTargets: number;
   totalScenarios: number;
   activeSessions: number;
   totalTestsRun: number;
+  errorRate: number;
 }
 
 interface RecentSession {
@@ -27,75 +50,91 @@ interface LiveSession {
   scenarioName: string | null;
   startedAt: string | null;
   messageCount: number;
+  lastMessages?: string[];
 }
 
-interface ScheduledJob {
-  id: string;
-  cronExpression: string;
-  isEnabled: boolean;
-  nextRunAt: string | null;
-  scenario: { name: string };
-}
-
-interface Target {
+interface TargetOption {
   id: string;
   name: string;
 }
 
-interface Scenario {
+interface ScenarioOption {
   id: string;
   name: string;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  COMPLETED: "bg-green-900/50 text-green-300",
-  FAILED: "bg-red-900/50 text-red-300",
-  RUNNING: "bg-blue-900/50 text-blue-300",
-  QUEUED: "bg-yellow-900/50 text-yellow-300",
-  PENDING: "bg-gray-700 text-gray-300",
-  CANCELLED: "bg-gray-700 text-gray-400",
+// ---------------------------------------------------------------------------
+// Status helpers
+// ---------------------------------------------------------------------------
+
+const STATUS_VARIANT: Record<string, "success" | "error" | "warning" | "info" | "neutral"> = {
+  COMPLETED: "success",
+  FAILED: "error",
+  RUNNING: "info",
+  QUEUED: "warning",
+  PENDING: "neutral",
+  CANCELLED: "neutral",
 };
 
-function LiveSessionElapsed({ startedAt }: { startedAt: string }) {
+const STATUS_ICON: Record<string, string> = {
+  COMPLETED: "\u2713",
+  FAILED: "\u2717",
+  RUNNING: "\u25CF",
+  QUEUED: "\u25CB",
+  PENDING: "\u2014",
+  CANCELLED: "\u2014",
+};
+
+// ---------------------------------------------------------------------------
+// Live elapsed timer
+// ---------------------------------------------------------------------------
+
+function LiveElapsed({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState("");
 
   useEffect(() => {
-    const update = () => {
-      const start = new Date(startedAt).getTime();
-      const diff = Date.now() - start;
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-
-      if (hours > 0) {
-        setElapsed(`${hours}h ${minutes % 60}m ${seconds % 60}s`);
-      } else if (minutes > 0) {
-        setElapsed(`${minutes}m ${seconds % 60}s`);
-      } else {
-        setElapsed(`${seconds}s`);
-      }
+    const tick = () => {
+      const diff = Date.now() - new Date(startedAt).getTime();
+      const s = Math.floor(diff / 1000);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      if (h > 0) setElapsed(`${h}h ${m % 60}m ${s % 60}s`);
+      else if (m > 0) setElapsed(`${m}m ${s % 60}s`);
+      else setElapsed(`${s}s`);
     };
-
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, [startedAt]);
 
-  return <span className="font-mono text-blue-400">{elapsed}</span>;
+  return <span className="font-mono text-blue-400 text-xs">{elapsed}</span>;
 }
 
+// ---------------------------------------------------------------------------
+// Skeleton placeholder
+// ---------------------------------------------------------------------------
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-skeleton rounded bg-gray-800 ${className}`} />;
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard page
+// ---------------------------------------------------------------------------
+
 export default function DashboardPage() {
+  // Data state
   const [stats, setStats] = useState<DashboardStats>({
     totalTargets: 0,
     totalScenarios: 0,
     activeSessions: 0,
     totalTestsRun: 0,
+    errorRate: 0,
   });
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
-  const [nextJob, setNextJob] = useState<ScheduledJob | null>(null);
-  const [targets, setTargets] = useState<Target[]>([]);
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [targets, setTargets] = useState<TargetOption[]>([]);
+  const [scenarios, setScenarios] = useState<ScenarioOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -103,138 +142,114 @@ export default function DashboardPage() {
   const [selectedTarget, setSelectedTarget] = useState("");
   const [selectedScenario, setSelectedScenario] = useState("");
   const [executing, setExecuting] = useState(false);
-  const [executeResult, setExecuteResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [executeResult, setExecuteResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // -------------------------------------------------------------------------
+  // Data fetching
+  // -------------------------------------------------------------------------
+
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Try the dashboard stats endpoint first
-      const statsResponse = await fetch("/api/dashboard/stats");
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        if (statsData.success) {
-          const d = statsData.data;
+      const res = await fetch("/api/dashboard/stats");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          const d = json.data;
+
+          // Compute error rate from recent sessions
+          const recent: RecentSession[] = d.recentSessions ?? [];
+          const total = recent.length;
+          const failed = recent.filter(
+            (s: RecentSession) => s.status === "FAILED"
+          ).length;
+
           setStats({
             totalTargets: d.counts?.targets ?? d.totalTargets ?? 0,
             totalScenarios: d.counts?.scenarios ?? d.totalScenarios ?? 0,
-            activeSessions: d.counts?.activeSessions ?? d.activeSessions ?? 0,
-            totalTestsRun: d.counts?.totalSessions ?? d.totalTestsRun ?? 0,
+            activeSessions:
+              d.counts?.activeSessions ?? d.activeSessions ?? 0,
+            totalTestsRun:
+              d.counts?.totalSessions ?? d.totalTestsRun ?? 0,
+            errorRate: total > 0 ? Math.round((failed / total) * 100) : 0,
           });
 
-          if (d.recentSessions) {
-            setRecentSessions(d.recentSessions);
-          }
-          if (d.liveSessions) {
-            setLiveSessions(d.liveSessions);
-          }
-          if (d.nextScheduledJob) {
-            setNextJob(d.nextScheduledJob);
-          }
-
+          if (d.recentSessions) setRecentSessions(d.recentSessions);
+          if (d.liveSessions) setLiveSessions(d.liveSessions);
           setLastUpdated(new Date());
           setLoading(false);
           return;
         }
       }
     } catch {
-      // Stats endpoint not available, fall back to individual endpoints
+      // fallback below
     }
-
-    // Fallback: fetch from individual endpoints
-    await fetchFromIndividualEndpoints();
+    await fetchFallback();
   }, []);
 
-  // Separate fast refresh for live sessions only (every 3s)
-  const fetchLiveSessions = useCallback(async () => {
+  const fetchFallback = async () => {
     try {
-      const response = await fetch("/api/dashboard/stats");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.liveSessions) {
-          setLiveSessions(data.data.liveSessions);
-          // Also update active session count
-          if (data.data.liveSessionCount !== undefined) {
-            setStats((prev) => ({
-              ...prev,
-              activeSessions: data.data.counts?.activeSessions ?? data.data.liveSessionCount ?? prev.activeSessions,
-            }));
-          }
-        }
-      }
-    } catch {
-      // silent - main refresh will catch up
-    }
-  }, []);
-
-  const fetchFromIndividualEndpoints = async () => {
-    try {
-      const [targetsRes, scenariosRes, sessionsRes, jobsRes] = await Promise.allSettled([
+      const [tRes, sRes, sessRes] = await Promise.allSettled([
         fetch("/api/targets"),
         fetch("/api/scenarios"),
-        fetch("/api/sessions?limit=5"),
-        fetch("/api/scheduled-jobs"),
+        fetch("/api/sessions?limit=10"),
       ]);
 
       let totalTargets = 0;
       let totalScenarios = 0;
-      const targetsList: Target[] = [];
-      const scenariosList: Scenario[] = [];
 
-      if (targetsRes.status === "fulfilled" && targetsRes.value.ok) {
-        const data = await targetsRes.value.json();
-        if (data.success) {
-          totalTargets = data.count ?? data.data?.length ?? 0;
-          targetsList.push(
-            ...(data.data || []).map((t: Target) => ({ id: t.id, name: t.name }))
+      if (tRes.status === "fulfilled" && tRes.value.ok) {
+        const d = await tRes.value.json();
+        if (d.success) {
+          totalTargets = d.count ?? d.data?.length ?? 0;
+          setTargets(
+            (d.data || []).map((t: TargetOption) => ({
+              id: t.id,
+              name: t.name,
+            }))
           );
         }
       }
 
-      if (scenariosRes.status === "fulfilled" && scenariosRes.value.ok) {
-        const data = await scenariosRes.value.json();
-        if (data.success) {
-          totalScenarios = data.count ?? data.data?.length ?? 0;
-          scenariosList.push(
-            ...(data.data || []).map((s: Scenario) => ({ id: s.id, name: s.name }))
+      if (sRes.status === "fulfilled" && sRes.value.ok) {
+        const d = await sRes.value.json();
+        if (d.success) {
+          totalScenarios = d.count ?? d.data?.length ?? 0;
+          setScenarios(
+            (d.data || []).map((s: ScenarioOption) => ({
+              id: s.id,
+              name: s.name,
+            }))
           );
         }
       }
 
-      if (sessionsRes.status === "fulfilled" && sessionsRes.value.ok) {
-        const data = await sessionsRes.value.json();
-        if (data.success) {
-          setRecentSessions(data.data || []);
-        }
+      const sessions: RecentSession[] = [];
+      if (sessRes.status === "fulfilled" && sessRes.value.ok) {
+        const d = await sessRes.value.json();
+        if (d.success) sessions.push(...(d.data || []));
       }
+      setRecentSessions(sessions);
 
-      let activeSessions = 0;
-      const activeSess = recentSessions.filter(
+      const active = sessions.filter(
         (s) => s.status === "RUNNING" || s.status === "QUEUED"
-      );
-      activeSessions = activeSess.length;
-
-      if (jobsRes.status === "fulfilled" && jobsRes.value.ok) {
-        const data = await jobsRes.value.json();
-        if (data.success && data.data?.length > 0) {
-          const enabledJobs = data.data
-            .filter((j: ScheduledJob) => j.isEnabled && j.nextRunAt)
-            .sort(
-              (a: ScheduledJob, b: ScheduledJob) =>
-                new Date(a.nextRunAt!).getTime() - new Date(b.nextRunAt!).getTime()
-            );
-          setNextJob(enabledJobs[0] || null);
-        }
-      }
+      ).length;
+      const failed = sessions.filter((s) => s.status === "FAILED").length;
 
       setStats({
         totalTargets,
         totalScenarios,
-        activeSessions,
+        activeSessions: active,
         totalTestsRun: 0,
+        errorRate:
+          sessions.length > 0
+            ? Math.round((failed / sessions.length) * 100)
+            : 0,
       });
-      setTargets(targetsList);
-      setScenarios(scenariosList);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
@@ -243,26 +258,42 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchLiveSessions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data.liveSessions) {
+          setLiveSessions(json.data.liveSessions);
+          if (json.data.counts?.activeSessions !== undefined) {
+            setStats((prev) => ({
+              ...prev,
+              activeSessions: json.data.counts.activeSessions,
+            }));
+          }
+        }
+      }
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Effects
+  // -------------------------------------------------------------------------
+
   useEffect(() => {
     fetchDashboardData();
-
-    // Full refresh every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
-
-    // Live sessions fast refresh every 3 seconds
+    const full = setInterval(fetchDashboardData, 30000);
     liveIntervalRef.current = setInterval(fetchLiveSessions, 3000);
-
     return () => {
-      clearInterval(interval);
-      if (liveIntervalRef.current) {
-        clearInterval(liveIntervalRef.current);
-      }
+      clearInterval(full);
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
     };
   }, [fetchDashboardData, fetchLiveSessions]);
 
-  // Also fetch targets/scenarios for Quick Execute (always needed)
   useEffect(() => {
-    const fetchPickerData = async () => {
+    const load = async () => {
       try {
         const [tRes, sRes] = await Promise.allSettled([
           fetch("/api/targets"),
@@ -270,27 +301,41 @@ export default function DashboardPage() {
         ]);
         if (tRes.status === "fulfilled" && tRes.value.ok) {
           const d = await tRes.value.json();
-          if (d.success) setTargets(d.data?.map((t: Target) => ({ id: t.id, name: t.name })) || []);
+          if (d.success)
+            setTargets(
+              (d.data || []).map((t: TargetOption) => ({
+                id: t.id,
+                name: t.name,
+              }))
+            );
         }
         if (sRes.status === "fulfilled" && sRes.value.ok) {
           const d = await sRes.value.json();
-          if (d.success) setScenarios(d.data?.map((s: Scenario) => ({ id: s.id, name: s.name })) || []);
+          if (d.success)
+            setScenarios(
+              (d.data || []).map((s: ScenarioOption) => ({
+                id: s.id,
+                name: s.name,
+              }))
+            );
         }
       } catch {
-        // silent
+        /* silent */
       }
     };
-    fetchPickerData();
+    load();
   }, []);
+
+  // -------------------------------------------------------------------------
+  // Quick Execute
+  // -------------------------------------------------------------------------
 
   const handleQuickExecute = async () => {
     if (!selectedTarget || !selectedScenario) return;
-
     setExecuting(true);
     setExecuteResult(null);
-
     try {
-      const response = await fetch("/api/sessions", {
+      const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -298,17 +343,20 @@ export default function DashboardPage() {
           scenarioId: selectedScenario,
         }),
       });
-
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
-        setExecuteResult({ success: true, message: `Session started: ${data.data?.id || "OK"}` });
+        setExecuteResult({
+          success: true,
+          message: `Session started: ${data.data?.id?.slice(0, 8) ?? "OK"}`,
+        });
         setSelectedTarget("");
         setSelectedScenario("");
-        // Refresh dashboard data
         setTimeout(fetchDashboardData, 1000);
       } else {
-        setExecuteResult({ success: false, message: data.error || "Failed to start session" });
+        setExecuteResult({
+          success: false,
+          message: data.error || "Failed to start session",
+        });
       }
     } catch {
       setExecuteResult({ success: false, message: "Failed to start session" });
@@ -317,201 +365,226 @@ export default function DashboardPage() {
     }
   };
 
-  const getRelativeTime = (dateStr: string) => {
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  const relativeTime = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const getSessionTargetName = (session: RecentSession) => {
-    return session.target?.name || session.targetName || "Unknown Target";
-  };
+  const sessionTarget = (s: RecentSession) =>
+    s.target?.name || s.targetName || "Unknown";
+  const sessionScenario = (s: RecentSession) =>
+    s.scenario?.name || s.scenarioName || null;
 
-  const getSessionScenarioName = (session: RecentSession) => {
-    return session.scenario?.name || session.scenarioName || null;
-  };
+  const runningSessions = liveSessions.length > 0 ? liveSessions : [];
+  const activeSessionsFromRecent = recentSessions.filter(
+    (s) => s.status === "RUNNING"
+  );
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fadeIn">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-400 mt-2">
-            Welcome to Token-Burn - Your Chatbot Testing Platform
-          </p>
-        </div>
-        {lastUpdated && (
-          <div className="text-xs text-gray-500">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-            <button
-              onClick={fetchDashboardData}
-              className="ml-2 text-gray-400 hover:text-white transition"
-              title="Refresh now"
-            >
-              &#8635;
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slideIn">
-        <StatCard label="Total Targets" value={stats.totalTargets} loading={loading} href="/targets" />
-        <StatCard label="Total Scenarios" value={stats.totalScenarios} loading={loading} href="/scenarios" />
-        <StatCard
-          label="Active Sessions"
-          value={stats.activeSessions}
-          loading={loading}
-          href="/sessions"
-          highlight={stats.activeSessions > 0}
-        />
-        <StatCard label="Total Tests Run" value={stats.totalTestsRun} loading={loading} href="/sessions" />
-      </div>
-
-      {/* Live Sessions Panel */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-blue-700/50">
-        <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-gray-950">
+      {/* Header */}
+      <PageHeader
+        title="Command Center"
+        description="Real-time overview of all chatbot testing operations"
+        actions={
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">Live Sessions</h3>
-            <span className="relative flex items-center justify-center">
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                liveSessions.length > 0
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-700 text-gray-400"
-              }`}>
-                {liveSessions.length}
+            {lastUpdated && (
+              <span className="text-[11px] text-gray-500 tabular-nums">
+                {lastUpdated.toLocaleTimeString()}
               </span>
-              {liveSessions.length > 0 && (
-                <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-30 animate-ping" />
-              )}
-            </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchDashboardData()}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
           </div>
-          <Link href="/sessions" className="text-sm text-blue-400 hover:text-blue-300">
-            View all sessions
-          </Link>
-        </div>
+        }
+      />
 
-        {liveSessions.length === 0 ? (
-          <div className="text-center py-6 text-gray-500 text-sm">
-            No active sessions running
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {liveSessions.map((session) => (
-              <div
-                key={session.id}
-                className="bg-gray-700/50 rounded-lg p-4 border border-blue-800/50 flex items-center justify-between"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-                    </span>
-                    <span className="text-sm font-medium text-white truncate">
-                      {session.targetName}
-                    </span>
-                    {session.scenarioName && (
-                      <span className="text-xs text-gray-400 truncate">
-                        / {session.scenarioName}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 ml-4">
-                    {session.startedAt && (
-                      <span>
-                        Elapsed: <LiveSessionElapsed startedAt={session.startedAt} />
-                      </span>
-                    )}
-                    <span>{session.messageCount} message{session.messageCount !== 1 ? "s" : ""}</span>
-                  </div>
-                </div>
-                <Link
-                  href={`/sessions/${session.id}`}
-                  className="shrink-0 ml-4 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ============================================================= */}
+        {/* LEFT COLUMN — Live Sessions (tall tile) */}
+        {/* ============================================================= */}
+        <Card
+          variant="bordered"
+          className="lg:row-span-2 border-blue-900/50 bg-gray-900"
+        >
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-base">Live Sessions</CardTitle>
+              <span className="relative ml-1">
+                <Badge
+                  variant={runningSessions.length > 0 ? "info" : "neutral"}
+                  size="sm"
                 >
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-                  </span>
-                  Watch Live
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Sessions */}
-        <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Recent Sessions</h3>
-            <Link href="/sessions" className="text-sm text-blue-400 hover:text-blue-300">
+                  {runningSessions.length}
+                </Badge>
+                {runningSessions.length > 0 && (
+                  <span className="absolute inset-0 rounded-full bg-blue-500 opacity-30 animate-ping" />
+                )}
+              </span>
+            </div>
+            <Link
+              href="/sessions"
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
               View all
             </Link>
-          </div>
+          </CardHeader>
 
-          {loading ? (
-            <div className="text-gray-500 text-center py-8">Loading...</div>
-          ) : recentSessions.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">
-              No sessions yet. Use Quick Execute to start one.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentSessions.slice(0, 5).map((session) => (
-                <Link
-                  key={session.id}
-                  href={`/sessions/${session.id}`}
-                  className="block bg-gray-700/50 rounded-lg p-3 border border-gray-600 hover:border-gray-500 transition"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">
-                        {getSessionTargetName(session)}
-                      </span>
-                      {getSessionScenarioName(session) && (
-                        <span className="text-xs text-gray-400">
-                          / {getSessionScenarioName(session)}
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : runningSessions.length === 0 ? (
+              <EmptyState
+                icon={Radio}
+                title="No Live Sessions"
+                description="Start a test to see real-time session monitoring here."
+                className="py-10"
+              />
+            ) : (
+              <div className="space-y-3">
+                {runningSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="rounded-lg border border-blue-800/40 bg-gray-800/60 p-3 hover:border-blue-700/60 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <StatusIndicator status="running" size="sm" />
+                        <span className="text-sm font-medium text-gray-100 truncate">
+                          {session.targetName}
+                        </span>
+                      </div>
+                      <Link href={`/sessions/${session.id}`}>
+                        <Button variant="primary" size="sm">
+                          <Eye className="h-3 w-3" />
+                          Watch Live
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {session.scenarioName && (
+                      <p className="text-xs text-gray-500 mb-2 truncate pl-4">
+                        {session.scenarioName}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-4 pl-4 text-xs text-gray-500">
+                      {session.startedAt && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <LiveElapsed startedAt={session.startedAt} />
                         </span>
                       )}
+                      <span className="inline-flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" />
+                        {session.messageCount} msg
+                        {session.messageCount !== 1 ? "s" : ""}
+                      </span>
                     </div>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-medium ${
-                        STATUS_STYLES[session.status] || STATUS_STYLES.PENDING
-                      }`}
-                    >
-                      {session.status}
-                    </span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {session.startedAt ? getRelativeTime(session.startedAt) : "Not started"}
-                    {session.completedAt && ` - completed ${getRelativeTime(session.completedAt)}`}
-                  </div>
-                </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ============================================================= */}
+        {/* CENTER + RIGHT — Quick Stats (4 compact metric cards) */}
+        {/* ============================================================= */}
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {loading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-[76px] w-full rounded-lg" />
               ))}
-            </div>
+            </>
+          ) : (
+            <>
+              <Link href="/targets" className="group">
+                <MetricCard
+                  label="Total Targets"
+                  value={stats.totalTargets}
+                  className="group-hover:border-gray-700 transition-colors h-full"
+                />
+              </Link>
+              <Link href="/scenarios" className="group">
+                <MetricCard
+                  label="Scenarios"
+                  value={stats.totalScenarios}
+                  className="group-hover:border-gray-700 transition-colors h-full"
+                />
+              </Link>
+              <Link href="/sessions" className="group">
+                <MetricCard
+                  label="Total Sessions"
+                  value={stats.totalTestsRun}
+                  className="group-hover:border-gray-700 transition-colors h-full"
+                />
+              </Link>
+              <MetricCard
+                label="Error Rate"
+                value={`${stats.errorRate}%`}
+                className={
+                  stats.errorRate > 20
+                    ? "border-red-800/50"
+                    : ""
+                }
+                trend={
+                  stats.errorRate > 0
+                    ? { direction: "down", value: `${stats.errorRate}%` }
+                    : undefined
+                }
+              />
+            </>
           )}
         </div>
 
-        {/* Right column: Quick Execute + Next Job */}
-        <div className="space-y-6">
-          {/* Quick Execute */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-4">Quick Execute</h3>
+        {/* ============================================================= */}
+        {/* Quick Execute + Recent Activity side by side */}
+        {/* ============================================================= */}
+
+        {/* Quick Execute */}
+        <Card variant="default" className="bg-gray-900">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-400" />
+              <CardTitle className="text-base">Quick Execute</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Target</label>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1">
+                  Target
+                </label>
                 <select
                   value={selectedTarget}
                   onChange={(e) => setSelectedTarget(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select target...</option>
                   {targets.map((t) => (
@@ -522,11 +595,13 @@ export default function DashboardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Scenario</label>
+                <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1">
+                  Scenario
+                </label>
                 <select
                   value={selectedScenario}
                   onChange={(e) => setSelectedScenario(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select scenario...</option>
                   {scenarios.map((s) => (
@@ -536,120 +611,254 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
-              <button
+              <Button
+                variant="primary"
+                className="w-full"
+                size="md"
                 onClick={handleQuickExecute}
-                disabled={!selectedTarget || !selectedScenario || executing}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
+                disabled={!selectedTarget || !selectedScenario}
+                loading={executing}
               >
+                <Play className="h-3.5 w-3.5" />
                 {executing ? "Starting..." : "Run Test"}
-              </button>
+              </Button>
+
               {executeResult && (
                 <div
-                  className={`text-xs p-2 rounded ${
+                  className={`text-xs p-2 rounded-md border ${
                     executeResult.success
-                      ? "bg-green-900/20 text-green-400 border border-green-800"
-                      : "bg-red-900/20 text-red-400 border border-red-800"
+                      ? "bg-emerald-900/10 text-emerald-400 border-emerald-800/30"
+                      : "bg-red-900/10 text-red-400 border-red-800/30"
                   }`}
                 >
                   {executeResult.message}
                 </div>
               )}
+
+              {targets.length === 0 &&
+                scenarios.length === 0 &&
+                !loading && (
+                  <p className="text-[11px] text-gray-600">
+                    Create a{" "}
+                    <Link
+                      href="/targets/new"
+                      className="text-blue-400 hover:underline"
+                    >
+                      target
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/scenarios/new"
+                      className="text-blue-400 hover:underline"
+                    >
+                      scenario
+                    </Link>{" "}
+                    to get started.
+                  </p>
+                )}
             </div>
+          </CardContent>
+        </Card>
 
-            {targets.length === 0 && scenarios.length === 0 && !loading && (
-              <div className="mt-3 text-xs text-gray-500">
-                Create a <Link href="/targets/new" className="text-blue-400 hover:underline">target</Link> and{" "}
-                <Link href="/scenarios/new" className="text-blue-400 hover:underline">scenario</Link> first.
+        {/* Recent Activity Feed */}
+        <Card variant="default" className="bg-gray-900">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-gray-400" />
+              <CardTitle className="text-base">Recent Activity</CardTitle>
+            </div>
+            <Link
+              href="/sessions"
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              View all
+            </Link>
+          </CardHeader>
+
+          <CardContent>
+            {loading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
               </div>
-            )}
-          </div>
-
-          {/* Next Scheduled Job */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-4">Next Scheduled Job</h3>
-            {nextJob ? (
-              <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                <div className="text-sm font-medium text-white mb-1">{nextJob.scenario.name}</div>
-                <div className="text-xs text-gray-400 space-y-1">
-                  <div>
-                    Schedule: <span className="text-gray-300 font-mono">{nextJob.cronExpression}</span>
-                  </div>
-                  {nextJob.nextRunAt && (
-                    <div>
-                      Next run:{" "}
-                      <span className="text-gray-300">
-                        {new Date(nextJob.nextRunAt).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            ) : recentSessions.length === 0 ? (
+              <div className="text-center py-8 text-sm text-gray-600">
+                No sessions yet. Run a test to see activity.
               </div>
             ) : (
-              <div className="text-gray-500 text-center py-4 text-sm">No scheduled jobs</div>
+              <div className="space-y-1">
+                {recentSessions.slice(0, 10).map((session) => (
+                  <Link
+                    key={session.id}
+                    href={`/sessions/${session.id}`}
+                    className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-gray-800/60 transition-colors group"
+                  >
+                    <span className="text-xs w-4 text-center shrink-0">
+                      {STATUS_ICON[session.status] || "\u2014"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-gray-200 truncate">
+                          {sessionTarget(session)}
+                        </span>
+                        {sessionScenario(session) && (
+                          <span className="text-[11px] text-gray-600 truncate hidden sm:inline">
+                            / {sessionScenario(session)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-gray-600 tabular-nums shrink-0">
+                      {session.startedAt
+                        ? relativeTime(session.startedAt)
+                        : "pending"}
+                    </span>
+                    <Badge
+                      variant={
+                        STATUS_VARIANT[session.status] || "neutral"
+                      }
+                      size="sm"
+                    >
+                      {session.status}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* ============================================================= */}
+        {/* Active Sessions Section (full width bottom) */}
+        {/* ============================================================= */}
+        {activeSessionsFromRecent.length > 0 && (
+          <Card
+            variant="bordered"
+            className="lg:col-span-3 border-blue-900/40 bg-gray-900"
+          >
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <StatusIndicator status="running" size="md" />
+                <CardTitle className="text-base">Active Sessions</CardTitle>
+                <Badge variant="info" size="sm">
+                  {activeSessionsFromRecent.length}
+                </Badge>
+              </div>
+              <Link
+                href="/sessions?status=RUNNING"
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Open Full View
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {activeSessionsFromRecent.map((session) => {
+                  const live = liveSessions.find(
+                    (ls) => ls.id === session.id
+                  );
+                  return (
+                    <Link
+                      key={session.id}
+                      href={`/sessions/${session.id}`}
+                      className="block rounded-lg border-l-2 border-l-blue-500 border border-gray-800 bg-gray-800/40 p-3 hover:border-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <StatusIndicator status="running" size="sm" />
+                          <span className="text-sm font-medium text-gray-100 truncate">
+                            {sessionTarget(session)}
+                          </span>
+                        </div>
+                        {live && (
+                          <span className="text-[11px] text-gray-500 tabular-nums">
+                            {live.messageCount} msgs
+                          </span>
+                        )}
+                      </div>
+
+                      {sessionScenario(session) && (
+                        <p className="text-xs text-gray-500 mb-2 pl-4 truncate">
+                          {sessionScenario(session)}
+                        </p>
+                      )}
+
+                      {session.startedAt && (
+                        <div className="flex items-center gap-1 pl-4 text-xs text-gray-600">
+                          <Clock className="h-3 w-3" />
+                          <LiveElapsed startedAt={session.startedAt} />
+                        </div>
+                      )}
+
+                      {/* Mini log preview */}
+                      {live?.lastMessages && live.lastMessages.length > 0 && (
+                        <div className="mt-2 pl-4 border-l border-gray-700 ml-1 space-y-0.5">
+                          {live.lastMessages.slice(-3).map((msg, i) => (
+                            <p
+                              key={i}
+                              className="text-[11px] text-gray-600 truncate font-mono"
+                            >
+                              {msg}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Getting Started - show only when no data */}
-      {!loading && stats.totalTargets === 0 && stats.totalScenarios === 0 && (
-        <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-400 mb-2">Getting Started</h3>
-          <p className="text-gray-300 mb-4">
-            Start testing your chatbots by following these steps:
-          </p>
-          <ol className="list-decimal list-inside space-y-2 text-gray-300">
-            <li>
-              <Link href="/targets/new" className="text-blue-400 hover:underline">
-                Create a target
-              </Link>{" "}
-              chatbot endpoint
-            </li>
-            <li>
-              <Link href="/scenarios/new" className="text-blue-400 hover:underline">
-                Design a test scenario
-              </Link>{" "}
-              with conversation flows
-            </li>
-            <li>Execute the scenario and monitor results</li>
-            <li>Analyze metrics and optimize your chatbot</li>
-          </ol>
-        </div>
-      )}
+      {/* Getting Started — only when truly empty */}
+      {!loading &&
+        stats.totalTargets === 0 &&
+        stats.totalScenarios === 0 && (
+          <Card
+            variant="bordered"
+            className="mt-4 border-blue-900/40 bg-blue-950/20"
+          >
+            <CardContent>
+              <div className="flex items-start gap-4">
+                <div className="rounded-full bg-blue-900/30 p-3">
+                  <Target className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-300 mb-1">
+                    Getting Started
+                  </h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Start testing your chatbots in three steps:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs text-gray-300">
+                    <li>
+                      <Link
+                        href="/targets/new"
+                        className="text-blue-400 hover:underline"
+                      >
+                        Create a target
+                      </Link>{" "}
+                      chatbot endpoint
+                    </li>
+                    <li>
+                      <Link
+                        href="/scenarios/new"
+                        className="text-blue-400 hover:underline"
+                      >
+                        Design a test scenario
+                      </Link>{" "}
+                      with conversation flows
+                    </li>
+                    <li>Execute the scenario and monitor results</li>
+                  </ol>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
     </div>
-  );
-}
-
-// --- Stat Card Component ---
-
-function StatCard({
-  label,
-  value,
-  loading,
-  href,
-  highlight,
-}: {
-  label: string;
-  value: number;
-  loading: boolean;
-  href: string;
-  highlight?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`bg-gray-800 rounded-lg p-6 border transition hover:border-gray-500 ${
-        highlight ? "border-blue-700" : "border-gray-700"
-      }`}
-    >
-      <h3 className="text-sm font-medium text-gray-400">{label}</h3>
-      {loading ? (
-        <div className="h-9 mt-2 bg-gray-700 rounded animate-pulse w-16" />
-      ) : (
-        <p className={`text-3xl font-bold mt-2 ${highlight ? "text-blue-400" : "text-white"}`}>
-          {value}
-        </p>
-      )}
-    </Link>
   );
 }

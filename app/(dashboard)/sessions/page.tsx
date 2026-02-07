@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Radio, Eye, Activity } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 
 interface Session {
   id: string;
@@ -25,30 +32,36 @@ interface Session {
   } | null;
 }
 
+const STATUS_BADGE: Record<string, "success" | "error" | "warning" | "info" | "neutral"> = {
+  COMPLETED: "success",
+  FAILED: "error",
+  RUNNING: "info",
+  QUEUED: "warning",
+  PENDING: "warning",
+};
+
+const FILTER_TABS = [
+  { key: "all", label: "All" },
+  { key: "RUNNING", label: "Running" },
+  { key: "COMPLETED", label: "Completed" },
+  { key: "FAILED", label: "Failed" },
+  { key: "QUEUED", label: "Queued" },
+];
+
 function useElapsedTime(startedAt: string, isActive: boolean) {
   const [elapsed, setElapsed] = useState("");
 
   useEffect(() => {
-    if (!isActive) {
-      return;
-    }
-
+    if (!isActive) return;
     const update = () => {
-      const start = new Date(startedAt).getTime();
-      const diff = Date.now() - start;
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-
-      if (hours > 0) {
-        setElapsed(`${hours}h ${minutes % 60}m ${seconds % 60}s`);
-      } else if (minutes > 0) {
-        setElapsed(`${minutes}m ${seconds % 60}s`);
-      } else {
-        setElapsed(`${seconds}s`);
-      }
+      const diff = Date.now() - new Date(startedAt).getTime();
+      const s = Math.floor(diff / 1000);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      if (h > 0) setElapsed(`${h}h ${m % 60}m ${s % 60}s`);
+      else if (m > 0) setElapsed(`${m}m ${s % 60}s`);
+      else setElapsed(`${s}s`);
     };
-
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
@@ -57,161 +70,79 @@ function useElapsedTime(startedAt: string, isActive: boolean) {
   return elapsed;
 }
 
-function SessionCard({ session }: { session: Session }) {
-  const isRunning = session.status === "RUNNING";
-  const isQueued = session.status === "QUEUED";
-  const elapsed = useElapsedTime(session.startedAt, isRunning);
+function formatDuration(startedAt: string, completedAt: string | null) {
+  const start = new Date(startedAt).getTime();
+  const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+  const s = Math.floor((end - start) / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
 
-  const borderClass = isRunning
-    ? "border-l-4 border-l-blue-500"
-    : isQueued
-    ? "border-l-4 border-l-yellow-500"
-    : "";
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ago`;
+  if (h > 0) return `${h}h ago`;
+  if (m > 0) return `${m}m ago`;
+  return "just now";
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "RUNNING":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "QUEUED":
-      case "PENDING":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "FAILED":
-        return "bg-red-500/20 text-red-400 border-red-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
-
-  const formatDuration = (startedAt: string, completedAt: string | null) => {
-    const start = new Date(startedAt).getTime();
-    const end = completedAt ? new Date(completedAt).getTime() : Date.now();
-    const durationMs = end - start;
-
-    const seconds = Math.floor(durationMs / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) return `${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-    return `${seconds}s`;
-  };
+function RunningSessionCard({ session }: { session: Session }) {
+  const elapsed = useElapsedTime(session.startedAt, true);
 
   return (
-    <div
-      className={`block bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors ${borderClass}`}
-    >
-      <Link
-        href={`/sessions/${session.id}`}
-        className="block p-6"
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-white">
-                {session.scenario?.name || "Custom Execution"}
-              </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 ${getStatusColor(
-                  session.status
-                )}`}
-              >
-                {isRunning && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-                  </span>
-                )}
-                {session.status}
-              </span>
+    <div className="rounded-lg border border-gray-800 border-l-4 border-l-blue-500 bg-gray-900 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <StatusIndicator status="running" size="lg" />
+          <div>
+            <div className="font-medium text-gray-100">
+              {session.scenario?.name || "Custom Execution"}
             </div>
-            <p className="text-sm text-gray-400">
-              Target: {session.target.name} ({session.target.connectorType})
-            </p>
-          </div>
-          <div className="text-right text-sm text-gray-400">
-            <div>Started: {new Date(session.startedAt).toLocaleString()}</div>
-            <div>
-              Duration:{" "}
-              {isRunning ? (
-                <span className="text-blue-400 font-medium">{elapsed}</span>
-              ) : (
-                formatDuration(session.startedAt, session.completedAt)
-              )}
+            <div className="text-xs text-gray-500">
+              {session.target.name} &middot; {elapsed}
             </div>
           </div>
         </div>
-
-        {/* Metrics Summary */}
-        {session.summaryMetrics && (
-          <div className="grid grid-cols-4 gap-4 pt-4 border-t border-gray-700">
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Messages</div>
-              <div className="text-lg font-semibold text-white">
-                {session.summaryMetrics.messageCount || 0}
-              </div>
+        <div className="flex items-center gap-3">
+          {session.summaryMetrics && (
+            <div className="hidden sm:flex items-center gap-4 text-xs text-gray-400 mr-4">
+              <span>{session.summaryMetrics.messageCount || 0} msgs</span>
+              <span>{(session.summaryMetrics.totalTokens || 0).toLocaleString()} tokens</span>
             </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Total Tokens</div>
-              <div className="text-lg font-semibold text-white">
-                {session.summaryMetrics.totalTokens?.toLocaleString() || 0}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Avg Response</div>
-              <div className="text-lg font-semibold text-white">
-                {session.summaryMetrics.avgResponseTimeMs?.toFixed(0) || 0}ms
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Errors</div>
-              <div className="text-lg font-semibold text-white">
-                {session.summaryMetrics.errorCount || 0}
-              </div>
-            </div>
-          </div>
-        )}
-      </Link>
-
-      {/* Watch Live button for RUNNING sessions */}
-      {isRunning && (
-        <div className="px-6 pb-4">
-          <Link
-            href={`/sessions/${session.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-            </span>
-            Watch Live
+          )}
+          <Link href={`/sessions/${session.id}`}>
+            <Button size="sm">
+              <Radio className="h-3.5 w-3.5" />
+              Watch Live
+            </Button>
           </Link>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 export default function SessionsPage() {
+  const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState("all");
 
   const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filter !== "all") {
-        params.set("status", filter);
-      }
-
+      if (filter !== "all") params.set("status", filter);
       const response = await fetch(`/api/sessions?${params.toString()}`);
       const data = await response.json();
-
-      if (data.success) {
-        setSessions(data.data);
-      }
+      if (data.success) setSessions(data.data);
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
     } finally {
@@ -223,63 +154,171 @@ export default function SessionsPage() {
     fetchSessions();
   }, [fetchSessions]);
 
-  // Sort: RUNNING first, then QUEUED, then the rest by startedAt desc
+  // Sort: RUNNING first, then QUEUED, then by startedAt desc
   const sortedSessions = [...sessions].sort((a, b) => {
     const priority: Record<string, number> = { RUNNING: 0, QUEUED: 1 };
-    const aPriority = priority[a.status] ?? 2;
-    const bPriority = priority[b.status] ?? 2;
-
-    if (aPriority !== bPriority) return aPriority - bPriority;
-
-    // Within same priority, sort by startedAt desc
+    const ap = priority[a.status] ?? 2;
+    const bp = priority[b.status] ?? 2;
+    if (ap !== bp) return ap - bp;
     return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
   });
 
+  const runningSessions = sortedSessions.filter((s) => s.status === "RUNNING");
+  const otherSessions = sortedSessions.filter((s) => s.status !== "RUNNING");
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Sessions</h1>
-          <p className="text-gray-400 mt-1">
-            View and manage test execution sessions
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Sessions"
+        description="View and manage test execution sessions"
+        breadcrumbs={[
+          { label: "Dashboard", href: "/" },
+          { label: "Sessions" },
+        ]}
+      />
 
-      {/* Filters */}
+      {/* Status Filter Pills */}
       <div className="flex gap-2">
-        {["all", "PENDING", "QUEUED", "RUNNING", "COMPLETED", "FAILED"].map((status) => (
+        {FILTER_TABS.map((tab) => (
           <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === status
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+              filter === tab.key
                 ? "bg-blue-600 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
             }`}
           >
-            {status === "all" ? "All" : status}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Sessions List */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-gray-400">Loading sessions...</div>
+        <div className="space-y-6">
+          {/* Skeleton for running sessions */}
+          <div className="space-y-3">
+            <div className="animate-skeleton h-4 w-40 rounded bg-gray-800" />
+            <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="animate-skeleton h-2.5 w-2.5 rounded-full bg-gray-800" />
+                  <div className="space-y-1.5">
+                    <div className="animate-skeleton h-4 w-36 rounded bg-gray-800" />
+                    <div className="animate-skeleton h-3 w-48 rounded bg-gray-800" />
+                  </div>
+                </div>
+                <div className="animate-skeleton h-8 w-24 rounded-md bg-gray-800" />
+              </div>
+            </div>
+          </div>
+          {/* Skeleton for sessions table */}
+          <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 bg-gray-900/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Target</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Scenario</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Started</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Duration</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Messages</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Tokens</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-5 w-20 rounded-full bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-28 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-32 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-16 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-14 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-8 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-4 w-12 rounded bg-gray-800" /></td>
+                    <td className="px-4 py-3"><div className="animate-skeleton h-7 w-7 rounded bg-gray-800" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : sessions.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">No sessions found</div>
-          <p className="text-sm text-gray-500">
-            Execute a scenario to create a new session
-          </p>
-        </div>
+        <EmptyState
+          icon={Activity}
+          title="No sessions found"
+          description="Execute a scenario to create a new session."
+        />
       ) : (
-        <div className="space-y-4">
-          {sortedSessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
-          ))}
+        <div className="space-y-6 animate-fadeIn">
+          {/* Running Sessions */}
+          {runningSessions.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+                Live Sessions ({runningSessions.length})
+              </h2>
+              {runningSessions.map((session) => (
+                <RunningSessionCard key={session.id} session={session} />
+              ))}
+            </div>
+          )}
+
+          {/* Sessions Table */}
+          {otherSessions.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-gray-800">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-800 bg-gray-900/50">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Target</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Scenario</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Started</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Duration</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Messages</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Tokens</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {otherSessions.map((session) => (
+                    <tr
+                      key={session.id}
+                      onClick={() => router.push(`/sessions/${session.id}`)}
+                      className="cursor-pointer transition-colors hover:bg-gray-800/50"
+                    >
+                      <td className="px-4 py-3">
+                        <Badge variant={STATUS_BADGE[session.status] || "neutral"} size="sm">
+                          {session.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-gray-300">{session.target.name}</td>
+                      <td className="px-4 py-3 text-gray-300">
+                        {session.scenario?.name || "Custom"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{timeAgo(session.startedAt)}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">
+                        {formatDuration(session.startedAt, session.completedAt)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">
+                        {session.summaryMetrics?.messageCount || 0}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">
+                        {(session.summaryMetrics?.totalTokens || 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link href={`/sessions/${session.id}`} onClick={(e) => e.stopPropagation()}>
+                          <Button variant="icon" size="sm">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

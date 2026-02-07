@@ -232,6 +232,15 @@ model Comparison {
   @@index([status])
 }
 
+// Setting: Key-value settings store for application configuration
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String   // "general", "appearance", "notifications", "api", "defaults"
+  updatedAt DateTime @updatedAt
+}
+
 // DeliveryStatus enum for webhook deliveries
 enum DeliveryStatus {
   PENDING

@@ -1,5 +1,4 @@
 import type { BaseConnector, ConnectorConfig } from "./base";
-import { HTTPConnector } from "./http";
 import type { ConnectorType } from "@prisma/client";
 
 /**
@@ -66,12 +65,32 @@ export class ConnectorRegistry {
   static clear(): void {
     this.connectors.clear();
   }
+
+  /**
+   * Ensure all built-in connectors are registered.
+   * Uses dynamic imports to avoid circular dependency issues.
+   */
+  static async registerAll(): Promise<void> {
+    const { HTTPConnector } = await import("./http");
+    const { WebSocketConnector } = await import("./websocket");
+    const { gRPCConnector } = await import("./grpc");
+    const { SSEConnector } = await import("./sse");
+
+    if (!this.isRegistered("HTTP_REST")) {
+      this.register("HTTP_REST", HTTPConnector);
+    }
+    if (!this.isRegistered("WEBSOCKET")) {
+      this.register("WEBSOCKET", WebSocketConnector);
+    }
+    if (!this.isRegistered("GRPC")) {
+      this.register("GRPC", gRPCConnector);
+    }
+    if (!this.isRegistered("SSE")) {
+      this.register("SSE", SSEConnector);
+    }
+  }
 }
 
-// Auto-register built-in connectors
+// Eagerly register HTTP_REST (no circular dep since http.ts doesn't import registry)
+import { HTTPConnector } from "./http";
 ConnectorRegistry.register("HTTP_REST", HTTPConnector);
-
-// Additional connectors will be registered when their modules are imported
-// import "./websocket";  // Auto-registers WebSocketConnector
-// import "./grpc";       // Auto-registers gRPCConnector
-// import "./sse";        // Auto-registers SSEConnector

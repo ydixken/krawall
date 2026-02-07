@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FlowBuilder, { FlowStep } from "@/components/scenarios/FlowBuilder";
+import { SCENARIO_TEMPLATES, type ScenarioTemplate } from "@/lib/scenarios/templates";
 
 interface Target {
   id: string;
@@ -28,11 +29,99 @@ const VERBOSITY_LEVELS = [
   { value: 5, label: "5 - Debug" },
 ];
 
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  STRESS_TEST: "bg-red-500/10 text-red-400 border-red-500/20",
+  EDGE_CASE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  CONTEXT: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  PERFORMANCE: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  LOGIC: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+  TOKEN_BURN: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  ATTACK_SURFACE: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
+function getCategoryBadgeColor(category: string): string {
+  return CATEGORY_BADGE_COLORS[category] || "bg-gray-500/10 text-gray-400 border-gray-500/20";
+}
+
+function formatCategoryLabel(category: string): string {
+  return category.replace(/_/g, " ");
+}
+
+let stepCounter = 0;
+function generateId(): string {
+  stepCounter++;
+  return "tpl_" + stepCounter + "_" + Math.random().toString(36).substring(2, 7);
+}
+
+/**
+ * Convert template flowConfig entries into FlowStep[] format
+ * compatible with the FlowBuilder component.
+ */
+function convertTemplateFlow(flowConfig: any[]): FlowStep[] {
+  return flowConfig.map((entry) => {
+    if (entry.type === "message") {
+      return {
+        id: generateId(),
+        type: "message" as const,
+        config: { content: entry.content || "" },
+      };
+    }
+    if (entry.type === "loop") {
+      return {
+        id: generateId(),
+        type: "loop" as const,
+        config: {
+          iterations: entry.iterations || 1,
+          bodySteps: convertTemplateFlow(entry.steps || []),
+        },
+      };
+    }
+    if (entry.type === "conditional") {
+      return {
+        id: generateId(),
+        type: "conditional" as const,
+        config: {
+          condition: entry.condition || "",
+          thenSteps: convertTemplateFlow(entry.thenSteps || []),
+          elseSteps: convertTemplateFlow(entry.elseSteps || []),
+        },
+      };
+    }
+    if (entry.type === "delay") {
+      return {
+        id: generateId(),
+        type: "delay" as const,
+        config: { durationMs: entry.durationMs || 1000 },
+      };
+    }
+    // Fallback: treat unknown as message
+    return {
+      id: generateId(),
+      type: "message" as const,
+      config: { content: String(entry.content || "") },
+    };
+  });
+}
+
+const VERBOSITY_MAP: Record<string, number> = {
+  minimal: 1,
+  basic: 2,
+  normal: 3,
+  verbose: 4,
+  extreme: 5,
+  debug: 5,
+};
+
 export default function NewScenarioPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [targets, setTargets] = useState<Target[]>([]);
+
+  // Template state
+  const [selectedTemplate, setSelectedTemplate] = useState<ScenarioTemplate | null>(null);
+  const [showTemplates, setShowTemplates] = useState(true);
+  const [flowBuilderKey, setFlowBuilderKey] = useState(0);
 
   // Form state
   const [name, setName] = useState("");
@@ -59,6 +148,36 @@ export default function NewScenarioPage() {
     } catch (err) {
       console.error("Failed to fetch targets:", err);
     }
+  };
+
+  const applyTemplate = (template: ScenarioTemplate) => {
+    setSelectedTemplate(template);
+    setName(template.name);
+    setDescription(template.description);
+    setCategory(template.category);
+    setRepetitions(template.repetitions);
+    setConcurrency(template.concurrency);
+    setDelayBetweenMs(template.delayBetweenMs);
+    setVerbosityLevel(VERBOSITY_MAP[template.verbosityLevel] || 3);
+
+    const converted = convertTemplateFlow(template.flowConfig);
+    setFlowSteps(converted);
+    setFlowBuilderKey((k) => k + 1);
+    setShowTemplates(false);
+  };
+
+  const clearTemplate = () => {
+    setSelectedTemplate(null);
+    setName("");
+    setDescription("");
+    setCategory("");
+    setRepetitions(1);
+    setConcurrency(1);
+    setDelayBetweenMs(0);
+    setVerbosityLevel(1);
+    setFlowSteps([]);
+    setFlowBuilderKey((k) => k + 1);
+    setShowTemplates(true);
   };
 
   const buildFlowConfig = (steps: FlowStep[]): FlowStep[] => {
@@ -155,6 +274,91 @@ export default function NewScenarioPage() {
           </button>
         </div>
       )}
+
+      {/* Start from Template Section */}
+      <div className="mb-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold text-gray-300">Start from Template</h2>
+            {selectedTemplate && (
+              <span className="text-xs text-gray-500">
+                Using: <span className="text-blue-400">{selectedTemplate.name}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedTemplate && (
+              <button
+                onClick={clearTemplate}
+                className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+              >
+                Clear Template
+              </button>
+            )}
+            <button
+              onClick={() => setShowTemplates(!showTemplates)}
+              className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+            >
+              {showTemplates ? "Hide Templates" : "Show Templates"}
+            </button>
+          </div>
+        </div>
+
+        {showTemplates && (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-1">
+            {SCENARIO_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => applyTemplate(template)}
+                className={`text-left p-3 rounded-lg border transition-all ${
+                  selectedTemplate?.id === template.id
+                    ? "bg-blue-900/20 border-blue-500/50 ring-1 ring-blue-500/30"
+                    : "bg-gray-900 border-gray-800 hover:border-gray-600 hover:bg-gray-800"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h4 className="text-sm font-medium text-gray-200 leading-tight">
+                    {template.name}
+                  </h4>
+                  <span
+                    className={`inline-flex items-center shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${getCategoryBadgeColor(template.category)}`}
+                  >
+                    {formatCategoryLabel(template.category)}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                  {template.description}
+                </p>
+                <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-600">
+                  <span>{template.flowConfig.length} steps</span>
+                  <span>{template.repetitions}x reps</span>
+                  <span>{template.concurrency} concurrency</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {selectedTemplate && !showTemplates && (
+          <div className="bg-blue-900/10 border border-blue-800/30 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${getCategoryBadgeColor(selectedTemplate.category)}`}
+              >
+                {formatCategoryLabel(selectedTemplate.category)}
+              </span>
+              <span className="text-sm text-gray-300">{selectedTemplate.name}</span>
+              <span className="text-xs text-gray-500">{selectedTemplate.description}</span>
+            </div>
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+            >
+              Customize
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Metadata + Flow Builder */}
       <div className="flex gap-4 flex-1 min-h-0">
@@ -279,7 +483,7 @@ export default function NewScenarioPage() {
 
         {/* Flow Builder */}
         <div className="flex-1 min-w-0">
-          <FlowBuilder initialSteps={[]} onChange={setFlowSteps} />
+          <FlowBuilder key={flowBuilderKey} initialSteps={flowSteps} onChange={setFlowSteps} />
         </div>
       </div>
     </div>

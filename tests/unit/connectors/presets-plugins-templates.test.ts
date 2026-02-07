@@ -506,7 +506,7 @@ describe("OpenAI Plugin Lifecycle", () => {
     expect(messages.length).toBe(1);
     expect(messages[0].role).toBe("assistant");
     expect(messages[0].content).toBe("Hi there!");
-    expect(result.content).toBe("Hi there!");
+    expect(result.response.content).toBe("Hi there!");
   });
 
   it("should clear state on disconnect", async () => {

@@ -1,6 +1,59 @@
-import type { ConnectorPlugin, PluginContext } from "./types";
+import type { ConnectorPlugin, PluginContext, PluginConfigField } from "./types";
 import type { ConnectorConfig } from "../base";
 import { PluginLoader } from "./loader";
+
+const configSchema: PluginConfigField[] = [
+  {
+    key: "authEndpoint",
+    label: "Auth Endpoint",
+    type: "string",
+    required: true,
+    description: "URL to request the auth token from (e.g., https://api.example.com/auth/token).",
+  },
+  {
+    key: "authMethod",
+    label: "HTTP Method",
+    type: "select",
+    required: false,
+    default: "POST",
+    description: "HTTP method for the auth request.",
+    options: [
+      { label: "POST", value: "POST" },
+      { label: "GET", value: "GET" },
+    ],
+  },
+  {
+    key: "authBody",
+    label: "Auth Body",
+    type: "json",
+    required: false,
+    description: "JSON body to send with the auth request (with credential placeholders).",
+  },
+  {
+    key: "tokenPath",
+    label: "Token Path",
+    type: "string",
+    required: false,
+    default: "token",
+    description: "JSON path to extract the token from the auth response (e.g., 'data.access_token').",
+  },
+  {
+    key: "tokenHeader",
+    label: "Token Header",
+    type: "string",
+    required: false,
+    default: "Authorization",
+    description: "Header name to set with the extracted token.",
+  },
+  {
+    key: "tokenPrefix",
+    label: "Token Prefix",
+    type: "string",
+    required: false,
+    default: "Bearer",
+    description: "Prefix for the token value in the header (e.g., 'Bearer').",
+  },
+];
 
 /**
  * Multi-Step Auth Plugin
@@ -9,22 +62,16 @@ import { PluginLoader } from "./loader";
  * the main API calls. For example:
  * 1. POST /auth/token with credentials -> receive bearer token
  * 2. Use bearer token for subsequent API calls
- *
- * Plugin config expects:
- * - authEndpoint: URL to request token from
- * - authMethod: HTTP method (default: POST)
- * - authBody: JSON body to send (with credential placeholders)
- * - tokenPath: JSON path to extract token from auth response
- * - tokenHeader: Header name to set (default: Authorization)
- * - tokenPrefix: Prefix for the token value (default: Bearer)
- * - refreshInterval: Optional token refresh interval in ms
  */
 const multiStepAuthPlugin: ConnectorPlugin = {
   id: "multi-step-auth",
   name: "Multi-Step Authentication Plugin",
   description:
     "Performs auth handshake (e.g., POST /auth/token) before main API calls. Supports token refresh.",
+  version: "1.0.0",
+  priority: 10,
   compatibleConnectors: ["HTTP_REST"],
+  configSchema,
 
   async initialize(context: PluginContext): Promise<void> {
     context.state.authToken = null;
@@ -93,6 +140,10 @@ const multiStepAuthPlugin: ConnectorPlugin = {
   async onDisconnect(context: PluginContext): Promise<void> {
     context.state.authToken = null;
     context.state.tokenExpiresAt = null;
+  },
+
+  onError(error: Error, hookName: string): void {
+    console.error(`[multi-step-auth] Error in ${hookName}:`, error.message);
   },
 };
 

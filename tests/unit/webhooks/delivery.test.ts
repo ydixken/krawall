@@ -68,7 +68,7 @@ describe("Webhook Delivery", () => {
     });
 
     await new Promise<void>((resolve) => {
-      receiverServer = receiverApp.listen(receiverPort, resolve);
+      receiverServer = receiverApp.listen(receiverPort, () => resolve());
     });
   });
 

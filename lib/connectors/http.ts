@@ -89,9 +89,21 @@ export class HTTPConnector extends BaseConnector {
       // Apply request template to wrap message
       const payload = this.applyRequestTemplate(message);
 
+      // Inject persona into request body if configured
+      const persona = this.config.protocolConfig?.persona as string | undefined;
+      if (persona && typeof payload === "object" && payload !== null) {
+        (payload as Record<string, unknown>).persona = persona;
+      }
+
       // Determine HTTP method from protocol config (default to POST)
       const method = (this.config.protocolConfig?.method as string)?.toLowerCase() || "post";
       const path = (this.config.protocolConfig?.path as string) || "/";
+
+      // Build per-request headers (persona header)
+      const requestHeaders: Record<string, string> = {};
+      if (persona) {
+        requestHeaders["X-Persona"] = persona;
+      }
 
       // Send request
       const response = await this.client.request({
@@ -99,6 +111,7 @@ export class HTTPConnector extends BaseConnector {
         url: path,
         data: method !== "get" ? payload : undefined,
         params: method === "get" ? payload : undefined,
+        headers: requestHeaders,
       });
 
       // Check for error responses
@@ -169,13 +182,13 @@ export class HTTPConnector extends BaseConnector {
       // Try a simple GET request to the base URL
       const response = await this.client!.get("/", {
         timeout: 5000,
-        validateStatus: () => true, // Accept any status for health check
+        validateStatus: () => true, // Accept any status to avoid throwing
       });
 
       const latencyMs = Date.now() - startTime;
 
       return {
-        healthy: response.status < 500,
+        healthy: response.status >= 200 && response.status < 300,
         latencyMs,
         timestamp: new Date(),
       };

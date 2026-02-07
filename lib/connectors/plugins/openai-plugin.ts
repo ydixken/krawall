@@ -1,4 +1,4 @@
-import type { ConnectorPlugin, PluginContext } from "./types";
+import type { ConnectorPlugin, PluginContext, PluginConfigField } from "./types";
 import type { ConnectorResponse, MessageMetadata } from "../base";
 import { PluginLoader } from "./loader";
 
@@ -6,6 +6,46 @@ interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
+
+const configSchema: PluginConfigField[] = [
+  {
+    key: "model",
+    label: "Model",
+    type: "select",
+    required: true,
+    default: "gpt-4",
+    description: "OpenAI model to use for chat completions",
+    options: [
+      { label: "GPT-4", value: "gpt-4" },
+      { label: "GPT-4 Turbo", value: "gpt-4-turbo" },
+      { label: "GPT-4o", value: "gpt-4o" },
+      { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
+    ],
+  },
+  {
+    key: "temperature",
+    label: "Temperature",
+    type: "number",
+    required: false,
+    default: 1,
+    description: "Sampling temperature (0–2). Lower = more deterministic.",
+  },
+  {
+    key: "max_tokens",
+    label: "Max Tokens",
+    type: "number",
+    required: false,
+    default: 1024,
+    description: "Maximum number of tokens to generate in the response.",
+  },
+  {
+    key: "systemPrompt",
+    label: "System Prompt",
+    type: "string",
+    required: false,
+    description: "Optional system prompt prepended to the conversation.",
+  },
+];
 
 /**
  * OpenAI Plugin
@@ -20,7 +60,10 @@ const openaiPlugin: ConnectorPlugin = {
   name: "OpenAI Conversation Plugin",
   description:
     "Manages conversation history, streaming, and token usage extraction for OpenAI-compatible APIs.",
+  version: "1.0.0",
+  priority: 50,
   compatibleConnectors: ["HTTP_REST"],
+  configSchema,
 
   async initialize(context: PluginContext): Promise<void> {
     context.state.messages = [] as ChatMessage[];
@@ -38,9 +81,9 @@ const openaiPlugin: ConnectorPlugin = {
 
   async beforeSend(
     message: string,
-    metadata: MessageMetadata | undefined,
+    _metadata: MessageMetadata | undefined,
     context: PluginContext
-  ): Promise<{ message: string; metadata?: MessageMetadata }> {
+  ): Promise<{ message: string; metadata?: Record<string, unknown> }> {
     const messages = context.state.messages as ChatMessage[];
 
     // Add user message to history
@@ -51,13 +94,13 @@ const openaiPlugin: ConnectorPlugin = {
 
     // The actual message transformation happens at the connector level via request template.
     // This plugin tracks history; the connector wraps the last message.
-    return { message, metadata };
+    return { message };
   },
 
   async afterReceive(
     response: ConnectorResponse,
     context: PluginContext
-  ): Promise<ConnectorResponse> {
+  ): Promise<{ response: ConnectorResponse; metadata?: Record<string, unknown> }> {
     const messages = context.state.messages as ChatMessage[];
 
     // Add assistant response to history
@@ -81,13 +124,17 @@ const openaiPlugin: ConnectorPlugin = {
       }
     }
 
-    return response;
+    return { response };
   },
 
   async onDisconnect(context: PluginContext): Promise<void> {
     // Clear conversation history
     context.state.messages = [];
     context.state.totalTokens = 0;
+  },
+
+  onError(error: Error, hookName: string): void {
+    console.error(`[openai-plugin] Error in ${hookName}:`, error.message);
   },
 };
 

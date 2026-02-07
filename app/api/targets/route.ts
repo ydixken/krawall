@@ -59,6 +59,10 @@ export async function GET(request: NextRequest) {
         endpoint: true,
         authType: true,
         isActive: true,
+        presetId: true,
+        lastTestAt: true,
+        lastTestSuccess: true,
+        lastTestError: true,
         createdAt: true,
         updatedAt: true,
         // Don't include authConfig (sensitive)

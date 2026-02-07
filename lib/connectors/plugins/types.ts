@@ -1,6 +1,22 @@
 import type { BaseConnector, ConnectorConfig, ConnectorResponse, MessageMetadata } from "../base";
 
 /**
+ * Plugin Config Field
+ *
+ * Describes a single configuration field for UI form generation.
+ * Used to dynamically render plugin configuration forms.
+ */
+export interface PluginConfigField {
+  key: string;
+  label: string;
+  type: "string" | "number" | "boolean" | "select" | "json";
+  required: boolean;
+  default?: unknown;
+  description: string;
+  options?: { label: string; value: string }[];
+}
+
+/**
  * ConnectorPlugin Interface
  *
  * Plugins extend base connectors with additional capabilities such as
@@ -17,8 +33,20 @@ export interface ConnectorPlugin {
   /** Plugin description */
   description: string;
 
+  /** Plugin version (semver) */
+  version: string;
+
   /** Connector types this plugin is compatible with */
   compatibleConnectors: string[];
+
+  /** Execution priority — lower runs first. Default 100. Auth plugins use 10. */
+  priority?: number;
+
+  /** Minimum connector version required (semver) */
+  minConnectorVersion?: string;
+
+  /** Configuration schema for UI form generation */
+  configSchema?: PluginConfigField[];
 
   /**
    * Hook called before sending a message.
@@ -28,7 +56,7 @@ export interface ConnectorPlugin {
     message: string,
     metadata: MessageMetadata | undefined,
     context: PluginContext
-  ): Promise<{ message: string; metadata?: MessageMetadata }>;
+  ): Promise<{ message: string; metadata?: Record<string, unknown> }>;
 
   /**
    * Hook called after receiving a response.
@@ -37,7 +65,7 @@ export interface ConnectorPlugin {
   afterReceive?(
     response: ConnectorResponse,
     context: PluginContext
-  ): Promise<ConnectorResponse>;
+  ): Promise<{ response: ConnectorResponse; metadata?: Record<string, unknown> }>;
 
   /**
    * Hook called when establishing a connection.
@@ -55,6 +83,12 @@ export interface ConnectorPlugin {
    * Initialize plugin state for a session.
    */
   initialize?(context: PluginContext): Promise<void>;
+
+  /**
+   * Optional error handler invoked when any hook throws.
+   * Allows plugins to log or recover from errors in their own hooks.
+   */
+  onError?(error: Error, hookName: string, context: PluginContext): void;
 }
 
 /**
@@ -92,4 +126,5 @@ export interface PluginMetadata {
   version: string;
   author?: string;
   compatibleConnectors: string[];
+  priority?: number;
 }

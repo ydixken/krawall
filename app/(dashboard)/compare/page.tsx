@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Plus, GitCompare, Trash2, Trophy, ArrowRight } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface ComparisonSession {
   id: string;
@@ -33,13 +41,14 @@ interface Comparison {
   createdAt: string;
 }
 
-const WINNER_BADGE: Record<string, string> = {
-  A: "bg-green-900/50 text-green-300",
-  B: "bg-green-900/50 text-green-300",
-  tie: "bg-gray-700 text-gray-400",
+const STATUS_VARIANT: Record<string, "success" | "error" | "warning" | "neutral"> = {
+  completed: "success",
+  failed: "error",
+  pending: "warning",
 };
 
 export default function ComparePage() {
+  const router = useRouter();
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -59,9 +68,7 @@ export default function ComparePage() {
       const data = await response.json();
       if (data.success) {
         setComparisons(data.data || []);
-        if (data.pagination) {
-          setTotalPages(data.pagination.totalPages);
-        }
+        if (data.pagination) setTotalPages(data.pagination.totalPages);
       }
     } catch {
       setComparisons([]);
@@ -80,11 +87,9 @@ export default function ComparePage() {
     try {
       const response = await fetch(`/api/compare/${id}`, { method: "DELETE" });
       const data = await response.json();
-      if (data.success) {
-        setComparisons((prev) => prev.filter((c) => c.id !== id));
-      }
+      if (data.success) setComparisons((prev) => prev.filter((c) => c.id !== id));
     } catch {
-      // Ignore
+      // ignore
     } finally {
       setDeleting(null);
     }
@@ -106,179 +111,154 @@ export default function ComparePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Comparisons</h1>
-          <p className="text-gray-400 mt-1">Side-by-side A/B testing of sessions</p>
-        </div>
-        <Link
-          href="/compare/new"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
-        >
-          + New Comparison
-        </Link>
-      </div>
+      <PageHeader
+        title="Comparisons"
+        description="Side-by-side A/B testing of sessions"
+        breadcrumbs={[
+          { label: "Dashboard", href: "/" },
+          { label: "Compare" },
+        ]}
+        actions={
+          <Link href="/compare/new">
+            <Button size="sm">
+              <Plus className="h-4 w-4" />
+              New Comparison
+            </Button>
+          </Link>
+        }
+      />
 
       {comparisons.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
-          <h3 className="text-xl font-semibold text-gray-300 mb-2">No comparisons yet</h3>
-          <p className="text-gray-400 mb-6">
-            Compare two completed sessions to see which target performed better.
-          </p>
-          <Link
-            href="/compare/new"
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-          >
-            Create Your First Comparison
-          </Link>
-        </div>
+        <EmptyState
+          icon={GitCompare}
+          title="No comparisons yet"
+          description="Compare two completed sessions to see which target performed better."
+          action={{
+            label: "Create Comparison",
+            onClick: () => router.push("/compare/new"),
+          }}
+        />
       ) : (
         <>
-          <div className="space-y-4">
-            {comparisons.map((c) => {
-              const winner = getWinnerLabel(c);
-              return (
-                <div
-                  key={c.id}
-                  className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-gray-600 transition"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <Link href={`/compare/${c.id}`} className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-lg font-semibold text-white">{c.name}</h3>
-                        {c.results && (
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              WINNER_BADGE[c.results.winner] || WINNER_BADGE.tie
-                            }`}
-                          >
-                            {c.results.winner === "tie"
-                              ? "Tie"
-                              : `Winner: ${winner}`}
-                          </span>
+          <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 bg-gray-900/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Session A</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">vs</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Session B</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Winner</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Diffs</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {comparisons.map((c) => {
+                  const winner = getWinnerLabel(c);
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => router.push(`/compare/${c.id}`)}
+                      className="cursor-pointer transition-colors hover:bg-gray-800/50"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-100">{c.name}</div>
+                        {c.description && (
+                          <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[180px]">{c.description}</div>
                         )}
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            c.status === "completed"
-                              ? "bg-green-900/50 text-green-300"
-                              : c.status === "failed"
-                              ? "bg-red-900/50 text-red-300"
-                              : "bg-yellow-900/50 text-yellow-300"
-                          }`}
-                        >
+                      </td>
+                      <td className="px-4 py-3 text-gray-300 text-xs">{c.sessionA.targetName}</td>
+                      <td className="px-4 py-3 text-center text-gray-600">
+                        <ArrowRight className="h-3.5 w-3.5 inline" />
+                      </td>
+                      <td className="px-4 py-3 text-gray-300 text-xs">{c.sessionB.targetName}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={STATUS_VARIANT[c.status] || "neutral"} size="sm">
                           {c.status}
-                        </span>
-                      </div>
-                      {c.description && (
-                        <p className="text-sm text-gray-500 mt-1">{c.description}</p>
-                      )}
-                    </Link>
-                    <div className="flex items-center gap-3">
-                      <div className="text-xs text-gray-500">
-                        {new Date(c.createdAt).toLocaleString()}
-                      </div>
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        disabled={deleting === c.id}
-                        className="px-3 py-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition disabled:opacity-50"
-                      >
-                        {deleting === c.id ? "..." : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Session A vs B */}
-                  <Link href={`/compare/${c.id}`} className="block">
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex-1 bg-gray-900 rounded p-3 border border-gray-700">
-                        <div className="text-[10px] text-gray-500 mb-1">Session A</div>
-                        <div className="text-gray-200 font-medium">{c.sessionA.targetName}</div>
-                        {c.sessionA.summaryMetrics?.avgResponseTimeMs !== undefined && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {c.sessionA.summaryMetrics.avgResponseTimeMs.toFixed(0)}ms avg
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.results && (
+                          <span className="inline-flex items-center gap-1 text-xs">
+                            {c.results.winner !== "tie" && (
+                              <Trophy className="h-3 w-3 text-amber-400" />
+                            )}
+                            <span className={c.results.winner === "tie" ? "text-gray-400" : "text-emerald-400"}>
+                              {winner}
+                            </span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.results && (
+                          <div className="flex gap-3 text-[10px]">
+                            <span className="text-gray-500">
+                              Resp:{" "}
+                              <span className={c.results.responseTime.diffPercent < 0 ? "text-emerald-400" : c.results.responseTime.diffPercent > 0 ? "text-red-400" : "text-gray-400"}>
+                                {c.results.responseTime.diffPercent > 0 ? "+" : ""}
+                                {c.results.responseTime.diffPercent.toFixed(1)}%
+                              </span>
+                            </span>
+                            <span className="text-gray-500">
+                              Tok:{" "}
+                              <span className={c.results.tokenUsage.diffPercent < 0 ? "text-emerald-400" : c.results.tokenUsage.diffPercent > 0 ? "text-red-400" : "text-gray-400"}>
+                                {c.results.tokenUsage.diffPercent > 0 ? "+" : ""}
+                                {c.results.tokenUsage.diffPercent.toFixed(1)}%
+                              </span>
+                            </span>
                           </div>
                         )}
-                      </div>
-                      <div className="text-gray-600 font-bold text-lg">vs</div>
-                      <div className="flex-1 bg-gray-900 rounded p-3 border border-gray-700">
-                        <div className="text-[10px] text-gray-500 mb-1">Session B</div>
-                        <div className="text-gray-200 font-medium">{c.sessionB.targetName}</div>
-                        {c.sessionB.summaryMetrics?.avgResponseTimeMs !== undefined && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {c.sessionB.summaryMetrics.avgResponseTimeMs.toFixed(0)}ms avg
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Quick metric diffs */}
-                    {c.results && (
-                      <div className="flex gap-6 mt-3 text-xs text-gray-500">
-                        <span>
-                          Response:{" "}
-                          <span
-                            className={
-                              c.results.responseTime.diffPercent < 0
-                                ? "text-green-400"
-                                : c.results.responseTime.diffPercent > 0
-                                ? "text-red-400"
-                                : "text-gray-400"
-                            }
-                          >
-                            {c.results.responseTime.diffPercent > 0 ? "+" : ""}
-                            {c.results.responseTime.diffPercent.toFixed(1)}%
-                          </span>
-                        </span>
-                        <span>
-                          Tokens:{" "}
-                          <span
-                            className={
-                              c.results.tokenUsage.diffPercent < 0
-                                ? "text-green-400"
-                                : c.results.tokenUsage.diffPercent > 0
-                                ? "text-red-400"
-                                : "text-gray-400"
-                            }
-                          >
-                            {c.results.tokenUsage.diffPercent > 0 ? "+" : ""}
-                            {c.results.tokenUsage.diffPercent.toFixed(1)}%
-                          </span>
-                        </span>
-                        <span>
-                          Error diff:{" "}
-                          <span className={c.results.errorRate.diff > 0 ? "text-red-400" : "text-green-400"}>
-                            {c.results.errorRate.diff > 0 ? "+" : ""}
-                            {c.results.errorRate.diff.toFixed(1)}%
-                          </span>
-                        </span>
-                      </div>
-                    )}
-                  </Link>
-                </div>
-              );
-            })}
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <Link href={`/compare/${c.id}`}>
+                            <Button variant="icon" size="sm">
+                              <GitCompare className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                          <Tooltip content="Delete">
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              loading={deleting === c.id}
+                              onClick={() => handleDelete(c.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                            </Button>
+                          </Tooltip>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={page === 1}
-                className="px-3 py-1 bg-gray-700 text-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
                 Previous
-              </button>
+              </Button>
               <span className="text-sm text-gray-400">
                 Page {page} of {totalPages}
               </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={page === totalPages}
-                className="px-3 py-1 bg-gray-700 text-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
                 Next
-              </button>
+              </Button>
             </div>
           )}
         </>

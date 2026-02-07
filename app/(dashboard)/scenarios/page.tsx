@@ -1,7 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  Plus,
+  FileText,
+  Upload,
+  Download,
+  Play,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, Column } from "@/components/ui/data-table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ExportYamlButton, YamlImportModal } from "@/components/scenarios/YamlImportExport";
 
 interface Scenario {
@@ -9,13 +25,29 @@ interface Scenario {
   name: string;
   description: string | null;
   category: string | null;
+  repetitions?: number;
+  flowConfig?: unknown[];
+  isActive?: boolean;
   createdAt: string;
+  _count?: {
+    sessions?: number;
+  };
   target: {
     name: string;
   } | null;
 }
 
+const CATEGORY_BADGE: Record<string, "info" | "success" | "warning" | "error" | "neutral"> = {
+  SECURITY: "error",
+  PERFORMANCE: "warning",
+  FUNCTIONAL: "info",
+  COMPLIANCE: "success",
+  STRESS: "neutral",
+  CUSTOM: "neutral",
+};
+
 export default function ScenariosPage() {
+  const router = useRouter();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
@@ -28,10 +60,7 @@ export default function ScenariosPage() {
     try {
       const response = await fetch("/api/scenarios");
       const data = await response.json();
-
-      if (data.success) {
-        setScenarios(data.data);
-      }
+      if (data.success) setScenarios(data.data);
     } catch (error) {
       console.error("Failed to fetch scenarios:", error);
     } finally {
@@ -39,97 +68,191 @@ export default function ScenariosPage() {
     }
   };
 
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this scenario?")) return;
+    try {
+      const response = await fetch(`/api/scenarios/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (data.success) {
+        setScenarios((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const columns: Column<Scenario & Record<string, unknown>>[] = [
+    {
+      key: "name",
+      header: "Name",
+      sortable: true,
+      render: (row) => (
+        <div>
+          <div className="font-medium text-gray-100">{row.name}</div>
+          {row.description && (
+            <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[250px]">
+              {row.description}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "category",
+      header: "Category",
+      sortable: true,
+      render: (row) =>
+        row.category ? (
+          <Badge
+            variant={CATEGORY_BADGE[row.category] || "neutral"}
+            size="sm"
+          >
+            {row.category}
+          </Badge>
+        ) : (
+          <span className="text-xs text-gray-600">—</span>
+        ),
+    },
+    {
+      key: "flowConfig",
+      header: "Steps",
+      render: (row) => (
+        <span className="text-xs text-gray-400">
+          {Array.isArray(row.flowConfig) ? row.flowConfig.length : 0}
+        </span>
+      ),
+    },
+    {
+      key: "repetitions",
+      header: "Repetitions",
+      render: (row) => (
+        <span className="text-xs text-gray-400">{row.repetitions || 1}</span>
+      ),
+    },
+    {
+      key: "_count",
+      header: "Sessions",
+      render: (row) => {
+        const count = (row._count as Scenario["_count"])?.sessions;
+        return (
+          <span className="text-xs text-gray-400">{count ?? 0}</span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "w-[120px]",
+      render: (row) => (
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Tooltip content="Execute">
+            <Link href={`/scenarios/${row.id}/execute`}>
+              <Button variant="icon" size="sm">
+                <Play className="h-3.5 w-3.5 text-emerald-400" />
+              </Button>
+            </Link>
+          </Tooltip>
+          <Tooltip content="Edit">
+            <Link href={`/scenarios/${row.id}/edit`}>
+              <Button variant="icon" size="sm">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </Tooltip>
+          <ExportYamlButton scenarioId={row.id} scenarioName={row.name} />
+          <Tooltip content="Delete">
+            <Button variant="icon" size="sm" onClick={(e) => handleDelete(row.id, e)}>
+              <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            </Button>
+          </Tooltip>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Test Scenarios</h1>
-          <p className="text-gray-400 mt-1">Manage your chatbot test scenarios</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setImportOpen(true)}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
-          >
-            Import YAML
-          </button>
-          <Link
-            href="/scenarios/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Create Scenario
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Scenarios"
+        description="Manage and execute chatbot test scenarios"
+        breadcrumbs={[
+          { label: "Dashboard", href: "/" },
+          { label: "Scenarios" },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Import YAML
+            </Button>
+            <Link href="/scenarios/new">
+              <Button size="sm">
+                <Plus className="h-4 w-4" />
+                New Scenario
+              </Button>
+            </Link>
+          </div>
+        }
+      />
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-gray-400">Loading scenarios...</div>
+        <div className="overflow-x-auto rounded-lg border border-gray-800">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-800 bg-gray-900/50">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Steps</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Repetitions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Sessions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <tr key={i}>
+                  <td className="px-4 py-3">
+                    <div className="space-y-1">
+                      <div className="animate-skeleton h-4 w-36 rounded bg-gray-800" />
+                      <div className="animate-skeleton h-3 w-52 rounded bg-gray-800" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><div className="animate-skeleton h-5 w-20 rounded-full bg-gray-800" /></td>
+                  <td className="px-4 py-3"><div className="animate-skeleton h-4 w-6 rounded bg-gray-800" /></td>
+                  <td className="px-4 py-3"><div className="animate-skeleton h-4 w-6 rounded bg-gray-800" /></td>
+                  <td className="px-4 py-3"><div className="animate-skeleton h-4 w-6 rounded bg-gray-800" /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-skeleton h-7 w-7 rounded bg-gray-800" />
+                      <div className="animate-skeleton h-7 w-7 rounded bg-gray-800" />
+                      <div className="animate-skeleton h-7 w-7 rounded bg-gray-800" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : scenarios.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
-          <h3 className="text-xl font-semibold text-gray-300 mb-2">No scenarios yet</h3>
-          <p className="text-gray-400 mb-6">Create your first test scenario to get started</p>
-          <div className="flex items-center justify-center gap-3">
-            <Link
-              href="/scenarios/new"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Create Your First Scenario
-            </Link>
-            <button
-              onClick={() => setImportOpen(true)}
-              className="inline-block px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Import from YAML
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No scenarios yet"
+          description="Create your first test scenario or import from YAML."
+          action={{
+            label: "Create Scenario",
+            onClick: () => router.push("/scenarios/new"),
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {scenarios.map((scenario) => (
-            <div
-              key={scenario.id}
-              className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">{scenario.name}</h3>
-                  {scenario.category && (
-                    <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-900/50 text-blue-300 rounded">
-                      {scenario.category}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {scenario.description && (
-                <p className="text-gray-400 text-sm mb-4">{scenario.description}</p>
-              )}
-
-              {scenario.target && (
-                <div className="text-sm text-gray-500 mb-4">
-                  Target: <span className="text-gray-300">{scenario.target.name}</span>
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-4 items-center">
-                <Link
-                  href={`/scenarios/${scenario.id}/edit`}
-                  className="flex-1 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-center text-sm"
-                >
-                  Edit
-                </Link>
-                <button
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Execute
-                </button>
-                <ExportYamlButton scenarioId={scenario.id} scenarioName={scenario.name} />
-              </div>
-            </div>
-          ))}
+        <div className="animate-fadeIn">
+          <DataTable
+            columns={columns}
+            data={scenarios as (Scenario & Record<string, unknown>)[]}
+            filterKey="name"
+            filterPlaceholder="Search scenarios..."
+            onRowClick={(row) => router.push(`/scenarios/${row.id}/edit`)}
+          />
         </div>
       )}
 

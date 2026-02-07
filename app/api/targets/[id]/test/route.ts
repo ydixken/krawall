@@ -135,16 +135,34 @@ export async function POST(
 
     const totalLatencyMs = Date.now() - startTime;
 
-    return NextResponse.json({
-      success: true,
+    const isHealthy = healthResult?.healthy ?? false;
+    const success = !testError && isHealthy;
+    const errorMessage = testError
+      ? `Test message failed: ${testError}`
+      : healthResult?.error
+        ? `Health check failed: ${healthResult.error}`
+        : undefined;
+
+    // Update target with test results
+    await prisma.target.update({
+      where: { id },
       data: {
-        healthy: healthResult?.healthy ?? false,
+        lastTestAt: new Date(),
+        lastTestSuccess: success,
+        lastTestError: errorMessage ?? null,
+      },
+    });
+
+    return NextResponse.json({
+      success,
+      data: {
+        healthy: isHealthy,
         latencyMs: totalLatencyMs,
         connectLatencyMs,
         healthCheckLatencyMs: healthResult?.latencyMs,
         testResponse,
         connectorType: target.connectorType,
-        error: testError || healthResult?.error,
+        error: errorMessage,
       },
     });
   } catch (error) {

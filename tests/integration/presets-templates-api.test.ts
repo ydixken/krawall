@@ -22,7 +22,7 @@ function makeRequest(
   if (options.body) {
     init.body = JSON.stringify(options.body);
   }
-  return new NextRequest(new URL(url, "http://localhost:3000"), init);
+  return new NextRequest(new URL(url, "http://localhost:3000"), init as RequestInit & { signal?: AbortSignal });
 }
 
 // ============================================================
