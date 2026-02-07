@@ -604,11 +604,98 @@ Export session metrics as CSV or JSON.
 
 ---
 
+### GET /api/sessions/:id
+
+Get a single session by ID with full target and scenario details.
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "clwxyz789",
+    "targetId": "clwxyz123",
+    "scenarioId": "clwxyz456",
+    "status": "COMPLETED",
+    "startedAt": "2026-01-26T20:00:00.000Z",
+    "completedAt": "2026-01-26T20:05:00.000Z",
+    "executionConfig": { "..." : "..." },
+    "logPath": "logs/sessions/clwxyz789/",
+    "summaryMetrics": { "..." : "..." },
+    "target": {
+      "id": "clwxyz123",
+      "name": "My Chatbot",
+      "connectorType": "HTTP_REST",
+      "endpoint": "https://api.example.com/chat",
+      "..."
+    },
+    "scenario": {
+      "id": "clwxyz456",
+      "name": "Stress Test",
+      "..."
+    },
+    "createdAt": "2026-01-26T20:00:00.000Z",
+    "updatedAt": "2026-01-26T20:05:00.000Z"
+  }
+}
+```
+
+**Response (404)**
+
+```json
+{
+  "success": false,
+  "error": "Session not found"
+}
+```
+
+---
+
 ## Dashboard
 
 ### GET /api/dashboard/stats
 
-> **Coming Soon** — Dashboard statistics endpoint. Will return aggregated metrics for the homepage widgets: total sessions, active targets, recent activity, token usage trends.
+Returns aggregated statistics for the dashboard homepage.
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "counts": {
+      "targets": 5,
+      "scenarios": 12,
+      "activeSessions": 2,
+      "totalSessions": 150
+    },
+    "metrics": {
+      "avgResponseTimeMs": 245.5,
+      "totalTokensConsumed": 50000,
+      "errorRate": 0.033,
+      "sessionsLast24h": 8
+    },
+    "recentSessions": [
+      {
+        "id": "clwxyz789",
+        "targetName": "My Chatbot",
+        "scenarioName": "Stress Test",
+        "status": "COMPLETED",
+        "startedAt": "2026-01-26T20:00:00.000Z",
+        "summaryMetrics": { "..." : "..." }
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| counts.activeSessions | Sessions with status RUNNING or QUEUED |
+| metrics.errorRate | Ratio of FAILED sessions to total (0–1) |
+| metrics.sessionsLast24h | Sessions created in the last 24 hours |
+| recentSessions | Last 10 sessions ordered by creation date |
 
 ---
 
@@ -671,13 +758,149 @@ Delete a scheduled job.
 
 ---
 
+## Presets
+
+### GET /api/presets
+
+Returns all available provider presets for quick target configuration.
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "openai-chat",
+      "name": "OpenAI Chat Completions",
+      "description": "GPT-4, GPT-3.5-turbo, and other OpenAI chat models...",
+      "icon": "openai",
+      "connectorType": "HTTP_REST",
+      "defaultEndpoint": "https://api.openai.com",
+      "authType": "BEARER_TOKEN",
+      "authFields": [
+        {
+          "key": "token",
+          "label": "API Key",
+          "type": "password",
+          "placeholder": "sk-...",
+          "required": true
+        }
+      ],
+      "requestTemplate": {
+        "messagePath": "messages.0.content",
+        "structure": { "model": "gpt-4", "messages": [{ "role": "user", "content": "" }] }
+      },
+      "responseTemplate": {
+        "contentPath": "choices.0.message.content",
+        "tokenUsagePath": "usage",
+        "errorPath": "error.message"
+      },
+      "documentation": "...",
+      "exampleResponse": { "..." : "..." }
+    }
+  ]
+}
+```
+
+Available preset IDs: `openai-chat`, `anthropic-messages`, `google-gemini`, `azure-openai`, `ollama`, `custom-http`, `custom-websocket`, `custom-grpc`.
+
+---
+
+## Template Validation
+
+### POST /api/templates/validate
+
+Validates request and response templates, optionally against a sample API response.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| requestTemplate | object | No | Request template to validate |
+| requestTemplate.messagePath | string | Yes* | JSON path for message insertion |
+| requestTemplate.structure | object | No | Base JSON payload structure |
+| responseTemplate | object | No | Response template to validate |
+| responseTemplate.contentPath | string | Yes* | JSON path to extract response content |
+| responseTemplate.tokenUsagePath | string | No | JSON path to extract token usage |
+| responseTemplate.errorPath | string | No | JSON path to extract error messages |
+| sampleResponse | object | No | Sample API response to validate against |
+
+\* Required within their parent object.
+
+**Request Example**
+
+```json
+{
+  "requestTemplate": {
+    "messagePath": "messages.0.content",
+    "structure": {
+      "model": "gpt-4",
+      "messages": [{ "role": "user", "content": "" }]
+    }
+  },
+  "responseTemplate": {
+    "contentPath": "choices.0.message.content",
+    "tokenUsagePath": "usage"
+  },
+  "sampleResponse": {
+    "choices": [
+      { "message": { "role": "assistant", "content": "Hello!" } }
+    ],
+    "usage": { "prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15 }
+  }
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "results": [
+      {
+        "field": "requestTemplate.messagePath",
+        "valid": true,
+        "message": "Path \"messages.0.content\" is valid and writable"
+      },
+      {
+        "field": "responseTemplate.contentPath",
+        "valid": true,
+        "message": "Found content at \"choices.0.message.content\": Hello!"
+      },
+      {
+        "field": "responseTemplate.tokenUsagePath",
+        "valid": true,
+        "message": "Found token usage at \"usage\": {\"prompt_tokens\":10,...}"
+      }
+    ]
+  }
+}
+```
+
+When validation fails, individual results will have `valid: false` and may include a `suggestion` array of available JSON paths.
+
+**Response (400) — Invalid schema**
+
+```json
+{
+  "success": false,
+  "error": "Validation error",
+  "details": [...]
+}
+```
+
+---
+
 ## Webhooks
 
-> **Coming Soon** — Webhook notification system for receiving real-time event callbacks when sessions complete, fail, or hit metric thresholds.
->
-> Planned events: `session.completed`, `session.failed`, `session.cancelled`, `metric.threshold`
->
-> Payloads will be signed with HMAC-SHA256 via the `X-TokenBurn-Signature` header.
+Webhook notification system for receiving real-time event callbacks when sessions complete, fail, or hit metric thresholds.
+
+Events: `session.completed`, `session.failed`, `session.cancelled`, `metric.threshold`
+
+Payloads are signed with HMAC-SHA256 via the `X-TokenBurn-Signature` header.
 
 ---
 

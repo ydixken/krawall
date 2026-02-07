@@ -58,6 +58,12 @@ model Target {
   // Protocol-specific config
   protocolConfig Json?            // Headers, timeouts, retry config
 
+  // Provider preset reference
+  presetId        String?
+  lastTestAt      DateTime?
+  lastTestSuccess Boolean?
+  lastTestError   String?
+
   // Status
   isActive    Boolean  @default(true)
 
