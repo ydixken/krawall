@@ -743,13 +743,13 @@ export function StepScenario() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between shrink-0">
+          <div className="flex items-center justify-between shrink-0 pt-2 pb-1 border-t border-gray-800">
             <Button variant="ghost" size="sm" onClick={() => setSubStep("choose")}>
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
+              Back to Templates
             </Button>
             <Button size="sm" onClick={() => setSubStep("review")} disabled={!name}>
-              Review
+              Review & Create
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
