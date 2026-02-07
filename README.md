@@ -331,6 +331,7 @@ task worker:status    # Check queue health
 | [Deployment Guide](docs/DEPLOYMENT.md) | Production deployment with Docker & Nginx |
 | [Mock Chatbot](docs/MOCK_CHATBOT.md) | Mock server configuration and personas |
 | [Scenario Templates](docs/templates.md) | Pre-built template documentation |
+| [Plugin Development](docs/PLUGINS.md) | Writing custom plugins for connectors |
 | [Configuration](CONFIGURATION.md) | Environment variables and infrastructure options |
 | [Installation](INSTALL.md) | Step-by-step setup guide |
 | [Changelog](docs/CHANGELOG.md) | Implementation history and milestones |

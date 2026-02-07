@@ -1,6 +1,6 @@
 # Template & Preset Reference
 
-This document covers Krawall's template system: how request and response templates work, available provider presets, and how to develop connector plugins.
+This document covers Krawall's template system: how request and response templates work, available provider presets, and how to develop custom connectors. For plugin development, see [PLUGINS.md](PLUGINS.md).
 
 ---
 
@@ -12,7 +12,7 @@ This document covers Krawall's template system: how request and response templat
 - [Response Templates](#response-templates)
 - [Template Validation](#template-validation)
 - [Provider Presets](#provider-presets)
-- [Plugin Development Guide](#plugin-development-guide)
+- [Connector Development Guide](#connector-development-guide)
 
 ---
 
@@ -276,9 +276,9 @@ Each preset includes:
 
 ---
 
-## Plugin Development Guide
+## Connector Development Guide
 
-Krawall's connector system is extensible through plugins. A connector plugin implements a protocol-specific communication layer by extending the `BaseConnector` abstract class.
+Krawall's connector system is extensible through custom connectors. A connector implements a protocol-specific communication layer by extending the `BaseConnector` abstract class.
 
 ### Architecture
 
@@ -290,7 +290,7 @@ lib/connectors/
   presets.ts         # Provider preset definitions
 ```
 
-### Creating a Connector Plugin
+### Creating a Custom Connector
 
 #### 1. Extend BaseConnector
 
