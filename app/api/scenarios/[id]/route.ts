@@ -19,10 +19,9 @@ const UpdateScenarioSchema = z.object({
   repetitions: z.number().int().min(1).max(1000).optional(),
   concurrency: z.number().int().min(1).max(100).optional(),
   delayBetweenMs: z.number().int().min(0).max(60000).optional(),
-  verbosityLevel: z.number().int().min(1).max(5).optional(),
+  verbosityLevel: z.string().optional(),
   messageTemplates: z.record(z.unknown()).optional(),
-  isPublic: z.boolean().optional(),
-  tags: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
 });
 
 /**
@@ -31,18 +30,18 @@ const UpdateScenarioSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
+  const { id } = await params;
 
+  try {
     const scenario = await prisma.scenario.findUnique({
       where: { id },
       include: {
+        target: { select: { id: true, name: true } },
         _count: {
           select: {
             sessions: true,
-            targets: true,
           },
         },
       },
@@ -63,11 +62,10 @@ export async function GET(
       data: {
         ...scenario,
         sessionCount: scenario._count.sessions,
-        targetCount: scenario._count.targets,
       },
     });
   } catch (error) {
-    console.error(`GET /api/scenarios/${params.id} error:`, error);
+    console.error(`GET /api/scenarios/${id} error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -85,10 +83,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   try {
-    const { id } = params;
     const body = await request.json();
 
     // Validate request body
@@ -112,7 +111,7 @@ export async function PUT(
     // Update scenario in database
     const scenario = await prisma.scenario.update({
       where: { id },
-      data: validated,
+      data: validated as any,
     });
 
     return NextResponse.json({
@@ -130,7 +129,7 @@ export async function PUT(
       message: "Scenario updated successfully",
     });
   } catch (error) {
-    console.error(`PUT /api/scenarios/${params.id} error:`, error);
+    console.error(`PUT /api/scenarios/${id} error:`, error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -160,11 +159,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
+  const { id } = await params;
 
+  try {
     // Check if scenario exists
     const existing = await prisma.scenario.findUnique({
       where: { id },
@@ -209,7 +208,7 @@ export async function DELETE(
       message: "Scenario deleted successfully",
     });
   } catch (error) {
-    console.error(`DELETE /api/scenarios/${params.id} error:`, error);
+    console.error(`DELETE /api/scenarios/${id} error:`, error);
     return NextResponse.json(
       {
         success: false,

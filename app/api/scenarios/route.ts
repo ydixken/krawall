@@ -19,10 +19,9 @@ const CreateScenarioSchema = z.object({
   repetitions: z.number().int().min(1).max(1000).default(1),
   concurrency: z.number().int().min(1).max(100).default(1),
   delayBetweenMs: z.number().int().min(0).max(60000).default(0),
-  verbosityLevel: z.number().int().min(1).max(5).default(1),
+  verbosityLevel: z.string().default("normal"),
   messageTemplates: z.record(z.unknown()).default({}),
-  isPublic: z.boolean().default(false),
-  tags: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
 });
 
 /**
@@ -33,7 +32,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
-    const isPublic = searchParams.get("isPublic");
+    const isActive = searchParams.get("isActive");
 
     const where: any = {};
 
@@ -41,8 +40,8 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    if (isPublic !== null) {
-      where.isPublic = isPublic === "true";
+    if (isActive !== null) {
+      where.isActive = isActive === "true";
     }
 
     const scenarios = await prisma.scenario.findMany({
@@ -58,14 +57,12 @@ export async function GET(request: NextRequest) {
         repetitions: true,
         concurrency: true,
         verbosityLevel: true,
-        isPublic: true,
-        tags: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         _count: {
           select: {
             sessions: true,
-            targets: true,
           },
         },
       },
@@ -106,14 +103,13 @@ export async function POST(request: NextRequest) {
         name: validated.name,
         description: validated.description,
         category: validated.category,
-        flowConfig: validated.flowConfig,
+        flowConfig: validated.flowConfig as any,
         repetitions: validated.repetitions,
         concurrency: validated.concurrency,
         delayBetweenMs: validated.delayBetweenMs,
         verbosityLevel: validated.verbosityLevel,
-        messageTemplates: validated.messageTemplates,
-        isPublic: validated.isPublic,
-        tags: validated.tags,
+        messageTemplates: validated.messageTemplates as any,
+        isActive: validated.isActive,
       },
     });
 

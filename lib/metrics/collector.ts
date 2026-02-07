@@ -159,7 +159,7 @@ export class MetricsCollector {
     // For now, we're relying on the file-based logging in SessionLogger
     // The metrics-aggregator worker will read from the log files
 
-    console.log(\`📊 Flushing \${this.metrics.length} metrics for session \${this.sessionId}\`);
+    console.log(`Flushing ${this.metrics.length} metrics for session ${this.sessionId}`);
   }
 
   /**

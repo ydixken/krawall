@@ -2,7 +2,6 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { BaseConnector, ConnectorConfig, ConnectorResponse, HealthStatus, MessageMetadata } from "./base";
 import { ConnectorRegistry } from "./registry";
-import path from "path";
 
 /**
  * gRPC Connector
@@ -12,7 +11,7 @@ import path from "path";
  */
 export class gRPCConnector extends BaseConnector {
   private client: any = null;
-  private isConnected = false;
+  private _connected = false;
   private packageDefinition: protoLoader.PackageDefinition | null = null;
 
   /**
@@ -56,8 +55,8 @@ export class gRPCConnector extends BaseConnector {
       // Create client
       this.client = new ServiceClient(this.config.endpoint, credentials);
 
-      this.isConnected = true;
-      console.log(`✅ gRPC connected: ${this.config.endpoint}`);
+      this._connected = true;
+      console.log(`gRPC connected: ${this.config.endpoint}`);
     } catch (error) {
       console.error("gRPC connection failed:", error);
       throw error;
@@ -69,19 +68,24 @@ export class gRPCConnector extends BaseConnector {
    */
   async disconnect(): Promise<void> {
     if (this.client) {
-      // gRPC client doesn't have an explicit close method
-      // Channel cleanup happens automatically
       this.client = null;
     }
 
-    this.isConnected = false;
+    this._connected = false;
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this._connected;
   }
 
   /**
    * Send message via gRPC
    */
   async sendMessage(message: string, metadata?: MessageMetadata): Promise<ConnectorResponse> {
-    if (!this.isConnected || !this.client) {
+    if (!this._connected || !this.client) {
       throw new Error("gRPC client is not connected");
     }
 
@@ -106,7 +110,7 @@ export class gRPCConnector extends BaseConnector {
 
       // Add custom headers from auth config
       if (this.config.authConfig?.headers) {
-        for (const [key, value] of Object.entries(this.config.authConfig.headers)) {
+        for (const [key, value] of Object.entries(this.config.authConfig.headers as Record<string, unknown>)) {
           grpcMetadata.add(key, String(value));
         }
       }
@@ -129,9 +133,11 @@ export class gRPCConnector extends BaseConnector {
 
             resolve({
               content,
-              responseTimeMs,
-              success: true,
-              tokenUsage,
+              metadata: {
+                responseTimeMs,
+                tokenUsage,
+                rawResponse: response,
+              },
             });
           } catch (extractError) {
             reject(extractError);
@@ -166,11 +172,12 @@ export class gRPCConnector extends BaseConnector {
    * Check gRPC health
    */
   async healthCheck(): Promise<HealthStatus> {
-    if (!this.isConnected || !this.client) {
+    if (!this._connected || !this.client) {
       return {
         healthy: false,
-        message: "gRPC client is not connected",
+        error: "gRPC client is not connected",
         latencyMs: 0,
+        timestamp: new Date(),
       };
     }
 
@@ -178,30 +185,32 @@ export class gRPCConnector extends BaseConnector {
 
     return new Promise((resolve) => {
       // Try to call a health check method if available
-      const healthMethod = this.config.protocolConfig?.healthCheckMethod || "Check";
+      const healthMethod = (this.config.protocolConfig?.healthCheckMethod as string) || "Check";
 
       if (this.client[healthMethod]) {
-        this.client[healthMethod]({}, (error: grpc.ServiceError | null, response: any) => {
+        this.client[healthMethod]({}, (error: grpc.ServiceError | null, _response: any) => {
           if (error) {
             resolve({
               healthy: false,
-              message: `gRPC health check failed: ${error.message}`,
+              error: `gRPC health check failed: ${error.message}`,
               latencyMs: Date.now() - startTime,
+              timestamp: new Date(),
             });
           } else {
             resolve({
               healthy: true,
-              message: "gRPC service is healthy",
               latencyMs: Date.now() - startTime,
+              timestamp: new Date(),
             });
           }
         });
       } else {
         // If no health check method, just verify client exists
         resolve({
-          healthy: this.isConnected,
-          message: this.isConnected ? "gRPC client is connected" : "gRPC client is not connected",
+          healthy: this._connected,
+          error: this._connected ? undefined : "gRPC client is not connected",
           latencyMs: Date.now() - startTime,
+          timestamp: new Date(),
         });
       }
 
@@ -209,8 +218,9 @@ export class gRPCConnector extends BaseConnector {
       setTimeout(() => {
         resolve({
           healthy: false,
-          message: "gRPC health check timeout",
+          error: "gRPC health check timeout",
           latencyMs: Date.now() - startTime,
+          timestamp: new Date(),
         });
       }, 5000);
     });

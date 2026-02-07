@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import cron, { ScheduledTask } from "node-cron";
 import { prisma } from "@/lib/db/client";
 import { sessionQueue } from "./queue";
 
@@ -8,7 +8,7 @@ import { sessionQueue } from "./queue";
  * Manages cron-based scheduled execution of scenarios.
  */
 class JobScheduler {
-  private tasks: Map<string, cron.ScheduledTask> = new Map();
+  private tasks: Map<string, ScheduledTask> = new Map();
 
   /**
    * Initialize scheduler and load active jobs from database
@@ -108,7 +108,7 @@ class JobScheduler {
           scenarioId: job.scenarioId,
           status: "PENDING",
           startedAt: new Date(),
-          executionConfig: job.scenario.flowConfig,
+          executionConfig: (job.scenario.flowConfig ?? {}) as any,
         },
       });
 

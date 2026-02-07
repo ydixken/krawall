@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { BaseConnector, ConnectorConfig, ConnectorResponse, HealthStatus, MessageMetadata } from "./base";
 import { ConnectorRegistry } from "./registry";
-import { EventSource } from "eventsource";
+import EventSource from "eventsource";
 
 /**
  * Server-Sent Events (SSE) Connector
@@ -12,7 +12,7 @@ import { EventSource } from "eventsource";
 export class SSEConnector extends BaseConnector {
   private eventSource: EventSource | null = null;
   private httpClient: AxiosInstance | null = null;
-  private isConnected = false;
+  private _connected = false;
   private messageHandlers = new Map<string, (data: string) => void>();
 
   /**
@@ -22,7 +22,7 @@ export class SSEConnector extends BaseConnector {
     // Create HTTP client for sending messages (SSE is typically one-way receive)
     this.httpClient = axios.create({
       baseURL: this.config.endpoint,
-      timeout: this.config.protocolConfig?.timeout || 30000,
+      timeout: (this.config.protocolConfig?.timeout as number) || 30000,
       headers: {
         ...this.buildAuthHeaders(),
         "Content-Type": "application/json",
@@ -30,8 +30,8 @@ export class SSEConnector extends BaseConnector {
     });
 
     // SSE connection will be established on first message send
-    this.isConnected = true;
-    console.log(`✅ SSE connector initialized: ${this.config.endpoint}`);
+    this._connected = true;
+    console.log(`SSE connector initialized: ${this.config.endpoint}`);
   }
 
   /**
@@ -44,15 +44,22 @@ export class SSEConnector extends BaseConnector {
     }
 
     this.httpClient = null;
-    this.isConnected = false;
+    this._connected = false;
     this.messageHandlers.clear();
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this._connected;
   }
 
   /**
    * Send message and receive SSE stream response
    */
   async sendMessage(message: string, metadata?: MessageMetadata): Promise<ConnectorResponse> {
-    if (!this.isConnected || !this.httpClient) {
+    if (!this._connected || !this.httpClient) {
       throw new Error("SSE connector is not connected");
     }
 
@@ -63,7 +70,7 @@ export class SSEConnector extends BaseConnector {
 
     return new Promise((resolve, reject) => {
       let responseContent = "";
-      let tokenUsage: ConnectorResponse["tokenUsage"] = undefined;
+      let tokenUsage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined;
       let streamComplete = false;
 
       try {
@@ -93,9 +100,10 @@ export class SSEConnector extends BaseConnector {
               const responseTimeMs = Date.now() - startTime;
               resolve({
                 content: responseContent,
-                responseTimeMs,
-                success: true,
-                tokenUsage,
+                metadata: {
+                  responseTimeMs,
+                  tokenUsage,
+                },
               });
               return;
             }
@@ -133,14 +141,14 @@ export class SSEConnector extends BaseConnector {
             eventSource.close();
             reject(new Error("SSE stream timeout"));
           }
-        }, this.config.protocolConfig?.timeout || 60000);
+        }, (this.config.protocolConfig?.timeout as number) || 60000);
 
         // Send the initial message via HTTP POST
         this.httpClient!.post("/", payload)
           .then((response) => {
             // Some SSE implementations return the stream ID in the POST response
             if (response.data?.stream_id) {
-              console.log(`📡 SSE stream started: ${response.data.stream_id}`);
+              console.log(`SSE stream started: ${response.data.stream_id}`);
             }
           })
           .catch((error) => {
@@ -158,11 +166,12 @@ export class SSEConnector extends BaseConnector {
    * Check SSE health
    */
   async healthCheck(): Promise<HealthStatus> {
-    if (!this.isConnected || !this.httpClient) {
+    if (!this._connected || !this.httpClient) {
       return {
         healthy: false,
-        message: "SSE connector is not connected",
+        error: "SSE connector is not connected",
         latencyMs: 0,
+        timestamp: new Date(),
       };
     }
 
@@ -174,14 +183,15 @@ export class SSEConnector extends BaseConnector {
 
       return {
         healthy: true,
-        message: "SSE endpoint is reachable",
         latencyMs: Date.now() - startTime,
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
         healthy: false,
-        message: `SSE endpoint unreachable: ${(error as Error).message}`,
+        error: `SSE endpoint unreachable: ${(error as Error).message}`,
         latencyMs: Date.now() - startTime,
+        timestamp: new Date(),
       };
     }
   }

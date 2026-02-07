@@ -48,9 +48,11 @@ export class MockChatbotServer {
   private server: any;
   private messageHistory: ChatMessage[] = [];
   private requestCount: number = 0;
+  private testMode: boolean;
 
-  constructor(port: number = 3001) {
+  constructor(port: number = 3001, testMode: boolean = false) {
     this.port = port;
+    this.testMode = testMode;
     this.app = express();
     this.setupMiddleware();
     this.setupRoutes();
@@ -100,12 +102,16 @@ export class MockChatbotServer {
     const chatRequest: ChatRequest = req.body;
     const userMessage = chatRequest.messages[chatRequest.messages.length - 1];
 
-    // Simulate realistic response time (100-2000ms)
-    const delay = Math.random() * 1900 + 100;
-    await this.delay(delay);
+    // Simulate realistic response time (skipped in test mode for determinism)
+    if (!this.testMode) {
+      const delay = Math.random() * 1900 + 100;
+      await this.delay(delay);
+    } else {
+      await this.delay(10); // Minimal delay for timing assertions
+    }
 
-    // Randomly simulate errors (5% chance)
-    if (Math.random() < 0.05) {
+    // Randomly simulate errors (skipped in test mode for determinism)
+    if (!this.testMode && Math.random() < 0.05) {
       res.status(429).json({
         error: {
           message: "Rate limit exceeded",
@@ -161,8 +167,12 @@ export class MockChatbotServer {
       return;
     }
 
-    const delay = Math.random() * 1500 + 100;
-    await this.delay(delay);
+    if (!this.testMode) {
+      const delay = Math.random() * 1500 + 100;
+      await this.delay(delay);
+    } else {
+      await this.delay(10);
+    }
 
     const response = this.generateResponse(message);
     const tokens = this.estimateTokens(response);

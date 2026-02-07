@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionId = params.id;
+  const { id: sessionId } = await params;
 
   try {
     // Fetch session
@@ -88,14 +88,14 @@ export async function GET(
 
               if (currentSize > lastSize) {
                 // Read only new content
-                const stream = fs.createReadStream(messagesPath, {
+                const fileStream = fs.createReadStream(messagesPath, {
                   start: lastSize,
                   encoding: "utf-8",
                 });
 
                 let buffer = "";
 
-                stream.on("data", (chunk) => {
+                fileStream.on("data", (chunk) => {
                   buffer += chunk;
                   const lines = buffer.split("\n");
                   buffer = lines.pop() || ""; // Keep incomplete line in buffer
@@ -117,7 +117,7 @@ export async function GET(
                   }
                 });
 
-                stream.on("end", () => {
+                fileStream.on("end", () => {
                   lastSize = currentSize;
                 });
               }
@@ -125,8 +125,8 @@ export async function GET(
               // Check if session completed
               prisma.session.findUnique({ where: { id: sessionId } })
                 .then((updatedSession) => {
-                  if (updatedSession && 
-                      updatedSession.status !== "RUNNING" && 
+                  if (updatedSession &&
+                      updatedSession.status !== "RUNNING" &&
                       updatedSession.status !== "QUEUED") {
                     // Send completion event
                     controller.enqueue(

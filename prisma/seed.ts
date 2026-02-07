@@ -102,10 +102,8 @@ async function main() {
       repetitions: 5,
       concurrency: 1,
       delayBetweenMs: 1000,
-      verbosityLevel: 4,
+      verbosityLevel: "verbose",
       messageTemplates: {},
-      isPublic: true,
-      tags: ["stress", "repetition", "verbose"],
     },
   });
 
@@ -149,10 +147,8 @@ async function main() {
       repetitions: 3,
       concurrency: 1,
       delayBetweenMs: 500,
-      verbosityLevel: 5,
+      verbosityLevel: "extreme",
       messageTemplates: {},
-      isPublic: true,
-      tags: ["format", "xml", "expensive"],
     },
   });
 
@@ -211,10 +207,8 @@ async function main() {
       repetitions: 2,
       concurrency: 1,
       delayBetweenMs: 1500,
-      verbosityLevel: 3,
+      verbosityLevel: "verbose",
       messageTemplates: {},
-      isPublic: true,
-      tags: ["context", "accumulation", "references"],
     },
   });
 
@@ -272,10 +266,8 @@ async function main() {
       repetitions: 2,
       concurrency: 1,
       delayBetweenMs: 800,
-      verbosityLevel: 2,
+      verbosityLevel: "normal",
       messageTemplates: {},
-      isPublic: true,
-      tags: ["edge-cases", "formats", "conversion"],
     },
   });
 

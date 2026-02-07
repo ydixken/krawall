@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
           session.target.name,
           session.scenario?.name || "N/A",
           session.status,
-          session.startedAt.toISOString(),
+          session.startedAt?.toISOString() || "N/A",
           session.completedAt?.toISOString() || "N/A",
           metrics.messageCount || 0,
           metrics.totalTokens || 0,

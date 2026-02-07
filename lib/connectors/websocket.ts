@@ -13,10 +13,11 @@ export class WebSocketConnector extends BaseConnector {
   private connectionPromise: Promise<void> | null = null;
   private messageQueue: Array<{
     message: string;
+    startTime: number;
     resolve: (response: ConnectorResponse) => void;
     reject: (error: Error) => void;
   }> = [];
-  private isConnected = false;
+  private _connected = false;
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private readonly RECONNECT_DELAY_MS = 2000;
@@ -48,8 +49,8 @@ export class WebSocketConnector extends BaseConnector {
 
         // Connection opened
         this.ws.on("open", () => {
-          console.log(`✅ WebSocket connected: ${this.config.endpoint}`);
-          this.isConnected = true;
+          console.log(`WebSocket connected: ${this.config.endpoint}`);
+          this._connected = true;
           this.reconnectAttempts = 0;
           resolve();
         });
@@ -57,16 +58,16 @@ export class WebSocketConnector extends BaseConnector {
         // Connection closed
         this.ws.on("close", (code, reason) => {
           console.log(
-            `🔌 WebSocket closed: ${this.config.endpoint} (code: ${code}, reason: ${reason.toString()})`
+            `WebSocket closed: ${this.config.endpoint} (code: ${code}, reason: ${reason.toString()})`
           );
-          this.isConnected = false;
+          this._connected = false;
           this.handleDisconnect();
         });
 
         // Connection error
         this.ws.on("error", (error) => {
-          console.error(`❌ WebSocket error: ${this.config.endpoint}`, error);
-          this.isConnected = false;
+          console.error(`WebSocket error: ${this.config.endpoint}`, error);
+          this._connected = false;
           reject(error);
         });
 
@@ -77,7 +78,7 @@ export class WebSocketConnector extends BaseConnector {
 
         // Timeout for connection
         const timeout = setTimeout(() => {
-          if (!this.isConnected) {
+          if (!this._connected) {
             this.ws?.close();
             reject(new Error("WebSocket connection timeout"));
           }
@@ -100,15 +101,22 @@ export class WebSocketConnector extends BaseConnector {
       this.ws.close(1000, "Normal closure");
       this.ws = null;
     }
-    this.isConnected = false;
+    this._connected = false;
     this.connectionPromise = null;
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this._connected;
   }
 
   /**
    * Send message to WebSocket endpoint
    */
   async sendMessage(message: string, metadata?: MessageMetadata): Promise<ConnectorResponse> {
-    if (!this.isConnected || !this.ws) {
+    if (!this._connected || !this.ws) {
       throw new Error("WebSocket is not connected");
     }
 
@@ -119,7 +127,7 @@ export class WebSocketConnector extends BaseConnector {
       const payload = this.applyRequestTemplate(message);
 
       // Queue the message
-      this.messageQueue.push({ message, resolve, reject });
+      this.messageQueue.push({ message, startTime, resolve, reject });
 
       // Send message
       this.ws!.send(JSON.stringify(payload), (error) => {
@@ -134,13 +142,13 @@ export class WebSocketConnector extends BaseConnector {
       });
 
       // Timeout handler
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         const index = this.messageQueue.findIndex((item) => item.message === message);
         if (index !== -1) {
           this.messageQueue.splice(index, 1);
           reject(new Error("WebSocket message timeout"));
         }
-      }, this.config.protocolConfig?.timeout || 30000);
+      }, (this.config.protocolConfig?.timeout as number) || 30000);
     });
   }
 
@@ -156,12 +164,14 @@ export class WebSocketConnector extends BaseConnector {
       const queued = this.messageQueue.shift();
 
       if (queued) {
-        const responseTimeMs = Date.now() - Date.now(); // Should track individual message times
+        const responseTimeMs = Date.now() - queued.startTime;
         queued.resolve({
           content,
-          responseTimeMs,
-          success: true,
-          tokenUsage: this.extractTokenUsage(response),
+          metadata: {
+            responseTimeMs,
+            tokenUsage: this.extractTokenUsage(response),
+            rawResponse: response,
+          },
         });
       }
     } catch (error) {
@@ -193,7 +203,7 @@ export class WebSocketConnector extends BaseConnector {
     if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
       this.reconnectAttempts++;
       console.log(
-        `🔄 Attempting WebSocket reconnection (${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})...`
+        `Attempting WebSocket reconnection (${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})...`
       );
 
       setTimeout(() => {
@@ -209,11 +219,12 @@ export class WebSocketConnector extends BaseConnector {
    * Check WebSocket health
    */
   async healthCheck(): Promise<HealthStatus> {
-    if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    if (!this._connected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return {
         healthy: false,
-        message: "WebSocket is not connected",
+        error: "WebSocket is not connected",
         latencyMs: 0,
+        timestamp: new Date(),
       };
     }
 
@@ -227,8 +238,8 @@ export class WebSocketConnector extends BaseConnector {
         this.ws.once("pong", () => {
           resolve({
             healthy: true,
-            message: "WebSocket connection is healthy",
             latencyMs: Date.now() - startTime,
+            timestamp: new Date(),
           });
         });
 
@@ -236,15 +247,17 @@ export class WebSocketConnector extends BaseConnector {
         setTimeout(() => {
           resolve({
             healthy: false,
-            message: "WebSocket ping timeout",
+            error: "WebSocket ping timeout",
             latencyMs: Date.now() - startTime,
+            timestamp: new Date(),
           });
         }, 5000);
       } else {
         resolve({
           healthy: false,
-          message: "WebSocket is null",
+          error: "WebSocket is null",
           latencyMs: 0,
+          timestamp: new Date(),
         });
       }
     });

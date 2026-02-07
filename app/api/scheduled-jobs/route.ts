@@ -5,6 +5,7 @@ import { z } from "zod";
 import cron from "node-cron";
 
 const CreateScheduledJobSchema = z.object({
+  name: z.string().min(1).max(100),
   scenarioId: z.string().cuid(),
   cronExpression: z.string(),
   timezone: z.string().optional(),
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
     // Create scheduled job
     const job = await prisma.scheduledJob.create({
       data: {
+        name: data.name,
         scenarioId: data.scenarioId,
         cronExpression: data.cronExpression,
         timezone: data.timezone || "UTC",

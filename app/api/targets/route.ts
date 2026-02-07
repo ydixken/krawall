@@ -107,9 +107,9 @@ export async function POST(request: NextRequest) {
         endpoint: validated.endpoint,
         authType: validated.authType,
         authConfig: { encrypted: encryptedAuthConfig },
-        requestTemplate: validated.requestTemplate,
-        responseTemplate: validated.responseTemplate,
-        protocolConfig: validated.protocolConfig || {},
+        requestTemplate: validated.requestTemplate as any,
+        responseTemplate: validated.responseTemplate as any,
+        protocolConfig: (validated.protocolConfig || {}) as any,
         isActive: validated.isActive ?? true,
       },
     });

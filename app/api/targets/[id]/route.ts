@@ -38,11 +38,11 @@ const UpdateTargetSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
+  const { id } = await params;
 
+  try {
     const target = await prisma.target.findUnique({
       where: { id },
       include: {
@@ -90,7 +90,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`GET /api/targets/${params.id} error:`, error);
+    console.error(`GET /api/targets/${id} error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -108,10 +108,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   try {
-    const { id } = params;
     const body = await request.json();
 
     // Validate request body
@@ -162,7 +163,7 @@ export async function PUT(
       message: "Target updated successfully",
     });
   } catch (error) {
-    console.error(`PUT /api/targets/${params.id} error:`, error);
+    console.error(`PUT /api/targets/${id} error:`, error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -192,11 +193,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
+  const { id } = await params;
 
+  try {
     // Check if target exists
     const existing = await prisma.target.findUnique({
       where: { id },
@@ -241,7 +242,7 @@ export async function DELETE(
       message: "Target deleted successfully",
     });
   } catch (error) {
-    console.error(`DELETE /api/targets/${params.id} error:`, error);
+    console.error(`DELETE /api/targets/${id} error:`, error);
     return NextResponse.json(
       {
         success: false,

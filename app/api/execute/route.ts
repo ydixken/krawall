@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
-import { addSessionJob } from "@/lib/jobs/queue";
+import { addSessionJob, ExecutionConfig, FlowStep } from "@/lib/jobs/queue";
 import { z } from "zod";
 
 // Validation schema for execute request
@@ -85,15 +85,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Build execution configuration (merge scenario config with request overrides)
-    const executionConfig = {
+    const executionConfig: ExecutionConfig = {
       ...(scenario
         ? {
-            flowConfig: scenario.flowConfig,
+            flowConfig: (scenario.flowConfig as FlowStep[] | null) ?? undefined,
             repetitions: scenario.repetitions,
             concurrency: scenario.concurrency,
             delayBetweenMs: scenario.delayBetweenMs,
-            messageTemplates: scenario.messageTemplates,
-            verbosityLevel: scenario.verbosityLevel,
+            messageTemplates: scenario.messageTemplates as Record<string, unknown> | undefined ?? undefined,
+            verbosityLevel: scenario.verbosityLevel as ExecutionConfig["verbosityLevel"],
           }
         : {}),
       ...(validated.executionConfig || {}),
