@@ -454,6 +454,27 @@ export function StepTarget() {
             })()}
 
             {/* Request Template */}
+            {selectedPresetId === "mock-chatbot" ? (
+              <div className="space-y-3 opacity-60">
+                <h4 className="text-sm font-medium text-gray-300">Request &amp; Response Templates</h4>
+                <p className="text-xs text-gray-500">Pre-configured for the Mock Chatbot. These fields cannot be changed.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Message Path</label>
+                    <div className="px-3 py-2 rounded-md border border-gray-700 bg-gray-800 text-xs text-gray-400 font-mono">
+                      {form.requestTemplate.messagePath}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Response Path</label>
+                    <div className="px-3 py-2 rounded-md border border-gray-700 bg-gray-800 text-xs text-gray-400 font-mono">
+                      {form.responseTemplate.responsePath}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-300">Request Template</h4>
               <div>
@@ -553,6 +574,8 @@ export function StepTarget() {
                 Dot-notation paths to extract values from the API response.
               </p>
             </div>
+            </>
+            )}
 
             <TemplateHelp />
           </div>
