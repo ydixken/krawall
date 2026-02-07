@@ -328,8 +328,8 @@ export function StepScenario() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="flex flex-col gap-4 h-full">
+      <div className="shrink-0">
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Create Scenario</h2>
         <p className="text-sm text-gray-500">
           {subStep === "choose" && "Pick a template or build from scratch."}
@@ -356,7 +356,7 @@ export function StepScenario() {
 
       {/* Sub-step: Choose */}
       {subStep === "choose" && (
-        <div className="space-y-4 animate-fadeIn max-w-2xl mx-auto">
+        <div className="space-y-4 animate-fadeIn max-w-2xl mx-auto flex-1 min-h-0 overflow-y-auto">
           {/* Quick Start */}
           <div>
             <div className="text-xs font-medium text-gray-400 mb-2">Recommended</div>
@@ -456,10 +456,10 @@ export function StepScenario() {
 
       {/* Sub-step: Customize */}
       {subStep === "customize" && (
-        <div className="space-y-4 animate-fadeIn">
-          <div className="flex gap-4" style={{ minHeight: "480px" }}>
+        <div className="flex flex-col gap-4 animate-fadeIn flex-1 min-h-0">
+          <div className="flex gap-4 flex-1 min-h-0">
             {/* Scenario metadata sidebar */}
-            <div className="w-64 flex-shrink-0 bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-y-auto">
+            <div className="w-64 flex-shrink-0 bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-y-auto min-h-0">
               <h3 className="text-sm font-semibold text-gray-300 mb-3">Scenario Settings</h3>
               <div className="space-y-4">
                 <div>
@@ -738,12 +738,12 @@ export function StepScenario() {
             </div>
 
             {/* Flow Builder */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 min-h-0">
               <FlowBuilder key={flowBuilderKey} initialSteps={flowSteps} onChange={setFlowSteps} />
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between shrink-0">
             <Button variant="ghost" size="sm" onClick={() => setSubStep("choose")}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
@@ -758,7 +758,7 @@ export function StepScenario() {
 
       {/* Sub-step: Review & Create */}
       {subStep === "review" && (
-        <div className="space-y-4 animate-fadeIn max-w-2xl mx-auto">
+        <div className="space-y-4 animate-fadeIn max-w-2xl mx-auto flex-1 min-h-0 overflow-y-auto">
           <Card className="!p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-3">Scenario Summary</h3>
             <div className="space-y-2 text-xs">
