@@ -9,7 +9,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-Private-grey)]()
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 Krawall is a chatbot stress-testing platform that behaves like an overly engaged, perfectly valid user. No prompt injection. No jailbreaking. No auth bypass. Just very, very costly conversations.
 
