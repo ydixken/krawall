@@ -46,7 +46,7 @@ All agents and contributors MUST adhere to MUST/REQUIRED/SHALL statements withou
 
 Agents MUST consult official documentation before making assumptions:
 
-1. **Next.js 16.1.4**: https://nextjs.org/docs
+1. **Next.js 16.1.6**: https://nextjs.org/docs
    - App Router conventions
    - API Routes structure
    - Server-Sent Events handling
@@ -267,7 +267,7 @@ Agents MUST NOT:
 
 ### Approved Core Dependencies
 
-- **Framework**: Next.js 16.1.4, React 19.2.4
+- **Framework**: Next.js 16.1.6, React 19.2.4
 - **Database**: Prisma ORM, PostgreSQL client
 - **Queue**: BullMQ, Redis client (ioredis)
 - **Validation**: Zod

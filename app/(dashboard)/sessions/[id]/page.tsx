@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import LogViewer from "@/components/sessions/LogViewer";
 import SessionReplay from "@/components/sessions/SessionReplay";
 
@@ -19,6 +20,56 @@ interface Session {
   scenario: {
     name: string;
   } | null;
+}
+
+function QueueStatusBanner() {
+  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number } | null>(null);
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch("/api/queue/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setQueueInfo({
+              waiting: data.data.sessionQueue.waiting,
+              active: data.data.sessionQueue.active,
+            });
+          }
+        }
+      } catch { /* silent */ }
+    };
+
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="rounded-lg border border-blue-800/40 bg-blue-950/20 p-4">
+      <div className="flex items-center gap-3">
+        <div className="rounded-full bg-blue-900/30 p-2">
+          <AlertTriangle className="h-4 w-4 text-blue-400" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-blue-300">Session Queued</p>
+          {queueInfo ? (
+            <>
+              <p className="text-xs text-gray-400">
+                {queueInfo.waiting} session{queueInfo.waiting !== 1 ? "s" : ""} in queue, {queueInfo.active} processing
+              </p>
+              {queueInfo.waiting === 0 && queueInfo.active === 0 && (
+                <p className="text-xs text-amber-500 mt-1">Workers may not be running. Check server logs.</p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">Waiting for worker to pick up this session...</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SessionDetailPage() {
@@ -137,6 +188,11 @@ export default function SessionDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Queue Status Banner */}
+      {(session.status === "QUEUED" || session.status === "PENDING") && (
+        <QueueStatusBanner />
+      )}
 
       {/* Summary Metrics */}
       {session.summaryMetrics && (

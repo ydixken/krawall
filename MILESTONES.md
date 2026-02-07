@@ -11,7 +11,7 @@ This document defines the 6 implementation milestones for the Token-Burn chatbot
 **Goals**: Project scaffolding, database, basic connector, Docker setup
 
 **Deliverables**:
-1. ✅ Initialize Next.js 16.1.4 with TypeScript + Tailwind CSS
+1. ✅ Initialize Next.js 16.1.6 with TypeScript + Tailwind CSS
 2. ✅ Configure Prisma with PostgreSQL schema
 3. ✅ Set up Redis and BullMQ
 4. ✅ Implement BaseConnector abstract class

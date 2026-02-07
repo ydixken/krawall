@@ -20,6 +20,7 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
   const [messages, setMessages] = useState<LogMessage[]>([]);
   const [status, setStatus] = useState<string>("connecting");
   const [totalMessages, setTotalMessages] = useState(0);
+  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -79,6 +80,33 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
     };
   }, [sessionId, onComplete]);
 
+  // Poll queue status when session is pending/queued
+  useEffect(() => {
+    if (status !== "connecting" && status !== "PENDING" && status !== "QUEUED") {
+      setQueueInfo(null);
+      return;
+    }
+
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch("/api/queue/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setQueueInfo({
+              waiting: data.data.sessionQueue.waiting,
+              active: data.data.sessionQueue.active,
+            });
+          }
+        }
+      } catch { /* silent */ }
+    };
+
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 3000);
+    return () => clearInterval(interval);
+  }, [status]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -120,8 +148,17 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
       {/* Messages */}
       <div ref={scrollRef} className="max-h-[400px] overflow-y-auto divide-y divide-gray-800/50">
         {messages.length === 0 && isRunning && (
-          <div className="flex items-center justify-center py-8 text-sm text-gray-500">
-            Waiting for messages...
+          <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500 gap-1">
+            {queueInfo ? (
+              <>
+                <span>Session queued — {queueInfo.waiting} in queue, {queueInfo.active} processing</span>
+                {queueInfo.waiting === 0 && queueInfo.active === 0 && (
+                  <span className="text-xs text-amber-500">Workers may not be running. Check server logs.</span>
+                )}
+              </>
+            ) : (
+              <span>Waiting for messages...</span>
+            )}
           </div>
         )}
         {messages.map((msg, i) => (

@@ -21,6 +21,12 @@ tasks:
     cmds:
       - pnpm dev
 
+  dev:full:
+    desc: Start dev server with workers (recommended)
+    cmds:
+      - pnpm dev
+    # Workers auto-start via instrumentation.ts — no separate process needed
+
   build:
     desc: Build Next.js application for production
     cmds:
@@ -143,7 +149,8 @@ tasks:
       - task: db:push
       - task: db:seed
       - echo "✅ Setup complete!"
-      - echo "   Run 'task dev' to start development server"
+      - echo "   Run 'task dev' to start development server (workers auto-start)"
+      - echo "   Visit http://localhost:3000/guide for the interactive setup wizard"
 
   # Clean
   clean:
@@ -174,6 +181,11 @@ tasks:
       - echo "Redis:"
       - docker-compose -f {{.DOCKER_COMPOSE_FILE}} exec -T redis redis-cli ping || echo "❌ Not healthy"
       - echo ""
+
+  worker:status:
+    desc: Check queue and worker status
+    cmds:
+      - 'curl -s http://localhost:3000/api/queue/status | python3 -m json.tool || echo "Server not running"'
 
   logs:session:
     desc: View recent session logs

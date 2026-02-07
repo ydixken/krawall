@@ -12,6 +12,7 @@ import {
   MessageSquare,
   RefreshCw,
   Zap,
+  BookOpen,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +117,40 @@ function LiveElapsed({ startedAt }: { startedAt: string }) {
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-skeleton rounded bg-gray-800 ${className}`} />;
+}
+
+// ---------------------------------------------------------------------------
+// Queue indicator for Live Sessions header
+// ---------------------------------------------------------------------------
+
+function QueueIndicator() {
+  const [queued, setQueued] = useState(0);
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch("/api/queue/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setQueued(data.data.sessionQueue.waiting);
+          }
+        }
+      } catch { /* silent */ }
+    };
+
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (queued <= 0) return null;
+
+  return (
+    <Badge variant="warning" size="sm">
+      {queued} queued
+    </Badge>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +476,7 @@ export default function DashboardPage() {
                   <span className="absolute inset-0 rounded-full bg-blue-500 opacity-30 animate-ping" />
                 )}
               </span>
+              <QueueIndicator />
             </div>
             <Link
               href="/sessions"
@@ -813,48 +849,36 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Getting Started — only when truly empty */}
+      {/* Guide CTA — only when truly empty */}
       {!loading &&
         stats.totalTargets === 0 &&
         stats.totalScenarios === 0 && (
           <Card
             variant="bordered"
-            className="mt-4 border-blue-900/40 bg-blue-950/20"
+            className="mt-4 border-blue-900/40 bg-gradient-to-r from-blue-950/30 to-purple-950/20"
           >
             <CardContent>
-              <div className="flex items-start gap-4">
-                <div className="rounded-full bg-blue-900/30 p-3">
-                  <Target className="h-5 w-5 text-blue-400" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-full bg-blue-900/30 p-3">
+                    <BookOpen className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-300 mb-1">
+                      New here? Start the Guided Setup
+                    </h3>
+                    <p className="text-xs text-gray-400 mb-0">
+                      Set up your first chatbot target, create a test scenario,
+                      and run your first test — all in about 5 minutes.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-blue-300 mb-1">
-                    Getting Started
-                  </h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Start testing your chatbots in three steps:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1.5 text-xs text-gray-300">
-                    <li>
-                      <Link
-                        href="/targets/new"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Create a target
-                      </Link>{" "}
-                      chatbot endpoint
-                    </li>
-                    <li>
-                      <Link
-                        href="/scenarios/new"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Design a test scenario
-                      </Link>{" "}
-                      with conversation flows
-                    </li>
-                    <li>Execute the scenario and monitor results</li>
-                  </ol>
-                </div>
+                <Link href="/guide">
+                  <Button size="sm">
+                    <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+                    Start Guide
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
