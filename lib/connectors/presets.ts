@@ -410,14 +410,22 @@ Install models with \`ollama pull <model>\`:
       },
     ],
     requestTemplate: {
-      messagePath: "message",
+      messagePath: "input.text",
       structure: {
-        message: "{{message}}",
+        input: {
+          text: "{{message}}",
+          language: "en",
+        },
+        config: {
+          max_tokens: 512,
+          temperature: 0.7,
+        },
       },
     },
     responseTemplate: {
-      contentPath: "response",
-      errorPath: "error",
+      contentPath: "output.text",
+      tokenUsagePath: "usage",
+      errorPath: "error.message",
     },
     documentation: `## Custom HTTP Endpoint
 
@@ -436,9 +444,14 @@ The \`contentPath\` tells Krawall where to find the response text.
 The \`tokenUsagePath\` (optional) extracts token usage metrics.
 The \`errorPath\` (optional) extracts error messages from failed requests.`,
     exampleResponse: {
-      response: "Example response text",
-      metadata: {
-        tokens: 10,
+      output: {
+        text: "Hello! I'm your assistant. How can I help you today?",
+        confidence: 0.95,
+      },
+      usage: {
+        prompt_tokens: 12,
+        completion_tokens: 15,
+        total_tokens: 27,
       },
     },
   },
