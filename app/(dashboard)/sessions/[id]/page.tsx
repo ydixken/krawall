@@ -23,7 +23,7 @@ interface Session {
 }
 
 function QueueStatusBanner() {
-  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number } | null>(null);
+  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number; workerRunning: boolean } | null>(null);
 
   useEffect(() => {
     const fetchQueue = async () => {
@@ -35,6 +35,7 @@ function QueueStatusBanner() {
             setQueueInfo({
               waiting: data.data.sessionQueue.waiting,
               active: data.data.sessionQueue.active,
+              workerRunning: data.data.sessionQueue.workerRunning,
             });
           }
         }
@@ -59,7 +60,7 @@ function QueueStatusBanner() {
               <p className="text-xs text-gray-400">
                 {queueInfo.waiting} session{queueInfo.waiting !== 1 ? "s" : ""} in queue, {queueInfo.active} processing
               </p>
-              {queueInfo.waiting === 0 && queueInfo.active === 0 && (
+              {!queueInfo.workerRunning && (
                 <p className="text-xs text-amber-500 mt-1">Workers may not be running. Check server logs.</p>
               )}
             </>

@@ -22,10 +22,17 @@ tasks:
       - pnpm dev
 
   dev:full:
-    desc: Start dev server with workers (recommended)
+    desc: Start dev server + mock chatbot (recommended)
     cmds:
+      - npx tsx tests/mocks/chatbot-server.ts &
       - pnpm dev
-    # Workers auto-start via instrumentation.ts — no separate process needed
+    # Workers auto-start via instrumentation.ts
+    # Mock chatbot runs in background on port 3001
+
+  mock-server:
+    desc: Start mock chatbot server (port 3001)
+    cmds:
+      - npx tsx tests/mocks/chatbot-server.ts
 
   build:
     desc: Build Next.js application for production

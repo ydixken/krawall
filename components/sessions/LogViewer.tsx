@@ -152,26 +152,29 @@ export default function LogViewer({ sessionId, startedAt }: LogViewerProps) {
               setIsConnected(false);
               break;
 
+            case "reconnect":
+              // Session transitioned out of PENDING/QUEUED — reconnect to get messages
+              eventSource.close();
+              setTimeout(() => connectToStream(), 500);
+              break;
+
             default:
-              console.warn("Unknown event type:", data.type);
+              break;
           }
         } catch (parseError) {
           console.error("Failed to parse SSE message:", parseError);
         }
       };
 
-      eventSource.onerror = (err) => {
-        console.error("SSE error:", err);
-        setError("Connection lost. Retrying...");
+      eventSource.onerror = () => {
         setIsConnected(false);
         eventSource.close();
 
-        // Retry after 3 seconds
-        setTimeout(() => {
-          if (status === "RUNNING" || status === "QUEUED") {
-            connectToStream();
-          }
-        }, 3000);
+        // Only retry if session might still be active
+        if (status === "RUNNING" || status === "QUEUED" || status === "PENDING") {
+          setError("Connection lost. Retrying...");
+          setTimeout(() => connectToStream(), 3000);
+        }
       };
     } catch (err) {
       console.error("Failed to connect to stream:", err);

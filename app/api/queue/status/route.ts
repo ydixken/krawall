@@ -1,25 +1,31 @@
 import { NextResponse } from "next/server";
-import { getSessionQueueStats, getMetricsQueueStats } from "@/lib/jobs/queue";
+import {
+  getSessionQueueStats,
+  getMetricsQueueStats,
+  sessionQueue,
+  metricsQueue,
+} from "@/lib/jobs/queue";
 
 export async function GET() {
   try {
-    const [sessionStats, metricsStats] = await Promise.all([
-      getSessionQueueStats(),
-      getMetricsQueueStats(),
-    ]);
+    const [sessionStats, metricsStats, sessionWorkers, metricsWorkers] =
+      await Promise.all([
+        getSessionQueueStats(),
+        getMetricsQueueStats(),
+        sessionQueue.getWorkers().catch(() => []),
+        metricsQueue.getWorkers().catch(() => []),
+      ]);
 
     return NextResponse.json({
       success: true,
       data: {
         sessionQueue: {
           ...sessionStats,
-          // Basic heuristic: BullMQ doesn't expose a direct "worker attached" check from the Queue side.
-          // For a more accurate check, consider using Queue.getWorkers() (BullMQ v5+).
-          workerRunning: sessionStats.active > 0 || sessionStats.waiting >= 0,
+          workerRunning: sessionWorkers.length > 0,
         },
         metricsQueue: {
           ...metricsStats,
-          workerRunning: metricsStats.active > 0 || metricsStats.waiting >= 0,
+          workerRunning: metricsWorkers.length > 0,
         },
       },
     });

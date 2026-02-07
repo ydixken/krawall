@@ -24,23 +24,6 @@ export async function GET(
       );
     }
 
-    if (!session.logPath) {
-      return new Response(
-        JSON.stringify({ error: "No logs available for this session" }),
-        { status: 404 }
-      );
-    }
-
-    const messagesPath = path.join(session.logPath, "messages.jsonl");
-
-    // Check if log file exists
-    if (!fs.existsSync(messagesPath)) {
-      return new Response(
-        JSON.stringify({ error: "Log file not found" }),
-        { status: 404 }
-      );
-    }
-
     // Create SSE stream
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -54,6 +37,65 @@ export async function GET(
             completedAt: session.completedAt,
           })}\n\n`)
         );
+
+        // If session hasn't started yet (no logPath), wait for it
+        if (!session.logPath || !fs.existsSync(path.join(session.logPath, "messages.jsonl"))) {
+          if (session.status === "PENDING" || session.status === "QUEUED") {
+            // Poll until session starts or is no longer pending
+            const waitInterval = setInterval(async () => {
+              try {
+                const updated = await prisma.session.findUnique({ where: { id: sessionId } });
+                if (!updated) {
+                  clearInterval(waitInterval);
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: "complete", status: "FAILED" })}\n\n`)
+                  );
+                  controller.close();
+                  return;
+                }
+
+                // Send updated status
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({
+                    type: "status",
+                    status: updated.status,
+                    startedAt: updated.startedAt,
+                  })}\n\n`)
+                );
+
+                if (updated.status !== "PENDING" && updated.status !== "QUEUED") {
+                  clearInterval(waitInterval);
+                  // Session started or finished — redirect client to reconnect with fresh state
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: "reconnect" })}\n\n`)
+                  );
+                  controller.close();
+                }
+              } catch {
+                // silent
+              }
+            }, 2000);
+
+            request.signal.addEventListener("abort", () => {
+              clearInterval(waitInterval);
+              controller.close();
+            });
+            return;
+          }
+
+          // Session is completed/failed but has no log path
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({
+              type: "complete",
+              status: session.status,
+              completedAt: session.completedAt,
+            })}\n\n`)
+          );
+          controller.close();
+          return;
+        }
+
+        const messagesPath = path.join(session.logPath, "messages.jsonl");
 
         // Read and send existing messages
         try {

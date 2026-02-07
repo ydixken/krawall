@@ -179,11 +179,28 @@ export class HTTPConnector extends BaseConnector {
         await this.connect();
       }
 
-      // Try a simple GET request to the base URL
-      const response = await this.client!.get("/", {
-        timeout: 5000,
-        validateStatus: () => true, // Accept any status to avoid throwing
-      });
+      // Use explicit health check path from protocolConfig, or fall back to origin root.
+      // We avoid using `this.client.get("/")` because axios combines baseURL + url,
+      // which breaks when the endpoint includes a path (e.g., /v1/chat/completions).
+      const healthCheckPath = this.config.protocolConfig?.healthCheckPath as string | undefined;
+
+      let response;
+      if (healthCheckPath) {
+        response = await this.client!.get(healthCheckPath, {
+          timeout: 5000,
+          validateStatus: () => true,
+        });
+      } else {
+        // Request the origin root directly to avoid baseURL path issues
+        const origin = new URL(this.config.endpoint).origin;
+        response = await axios.get(origin, {
+          timeout: 5000,
+          validateStatus: () => true,
+          headers: {
+            ...this.buildAuthHeaders(),
+          },
+        });
+      }
 
       const latencyMs = Date.now() - startTime;
 

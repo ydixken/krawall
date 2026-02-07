@@ -20,7 +20,7 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
   const [messages, setMessages] = useState<LogMessage[]>([]);
   const [status, setStatus] = useState<string>("connecting");
   const [totalMessages, setTotalMessages] = useState(0);
-  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number } | null>(null);
+  const [queueInfo, setQueueInfo] = useState<{ waiting: number; active: number; workerRunning: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -96,6 +96,7 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
             setQueueInfo({
               waiting: data.data.sessionQueue.waiting,
               active: data.data.sessionQueue.active,
+              workerRunning: data.data.sessionQueue.workerRunning,
             });
           }
         }
@@ -152,7 +153,7 @@ export function MiniLogViewer({ sessionId, onComplete }: MiniLogViewerProps) {
             {queueInfo ? (
               <>
                 <span>Session queued — {queueInfo.waiting} in queue, {queueInfo.active} processing</span>
-                {queueInfo.waiting === 0 && queueInfo.active === 0 && (
+                {!queueInfo.workerRunning && (
                   <span className="text-xs text-amber-500">Workers may not be running. Check server logs.</span>
                 )}
               </>
