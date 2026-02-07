@@ -139,7 +139,7 @@ export default function DashboardLayout({
                     key={item.href}
                     href={item.href}
                     className={`flex items-center gap-2.5 rounded-md py-1.5 text-sm transition-colors relative ${
-                      collapsed ? "justify-center" : "px-2"
+                      collapsed ? "justify-center w-full" : "px-2"
                     } ${
                       active
                         ? "bg-blue-500/10 text-blue-400"
