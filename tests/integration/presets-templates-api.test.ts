@@ -52,7 +52,7 @@ describe("GET /api/presets", () => {
       expect(preset.requestTemplate).toBeDefined();
       expect(preset.requestTemplate.messagePath).toBeTruthy();
       expect(preset.responseTemplate).toBeDefined();
-      expect(preset.responseTemplate.contentPath).toBeTruthy();
+      expect(preset.responseTemplate.responsePath).toBeTruthy();
       expect(preset.documentation).toBeTruthy();
       expect(preset.exampleResponse).toBeDefined();
     }
@@ -111,7 +111,7 @@ describe("POST /api/templates/validate", () => {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "choices.0.message.content",
+            responsePath: "choices.0.message.content",
             tokenUsagePath: "usage",
           },
           sampleResponse: {
@@ -131,7 +131,7 @@ describe("POST /api/templates/validate", () => {
       expect(body.data.valid).toBe(true);
 
       const contentResult = body.data.results.find(
-        (r: any) => r.field === "responseTemplate.contentPath"
+        (r: any) => r.field === "responseTemplate.responsePath"
       );
       expect(contentResult).toBeDefined();
       expect(contentResult.valid).toBe(true);
@@ -154,7 +154,7 @@ describe("POST /api/templates/validate", () => {
             structure: { message: "" },
           },
           responseTemplate: {
-            contentPath: "response",
+            responsePath: "response",
           },
           sampleResponse: {
             response: "Test reply",
@@ -173,13 +173,13 @@ describe("POST /api/templates/validate", () => {
   });
 
   describe("invalid templates", () => {
-    it("should report invalid contentPath", async () => {
+    it("should report invalid responsePath", async () => {
       const { POST } = await import("@/app/api/templates/validate/route");
       const req = makeRequest("http://localhost:3000/api/templates/validate", {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "nonexistent.deeply.nested.path",
+            responsePath: "nonexistent.deeply.nested.path",
           },
           sampleResponse: {
             data: { text: "Hello" },
@@ -195,7 +195,7 @@ describe("POST /api/templates/validate", () => {
       expect(body.data.valid).toBe(false);
 
       const contentResult = body.data.results.find(
-        (r: any) => r.field === "responseTemplate.contentPath"
+        (r: any) => r.field === "responseTemplate.responsePath"
       );
       expect(contentResult).toBeDefined();
       expect(contentResult.valid).toBe(false);
@@ -209,7 +209,7 @@ describe("POST /api/templates/validate", () => {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "content",
+            responsePath: "content",
             tokenUsagePath: "nonexistent.usage",
           },
           sampleResponse: {
@@ -260,7 +260,7 @@ describe("POST /api/templates/validate", () => {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "choices.0.message.content",
+            responsePath: "choices.0.message.content",
           },
         },
       });
@@ -280,7 +280,7 @@ describe("POST /api/templates/validate", () => {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "content",
+            responsePath: "content",
             errorPath: "error.message",
           },
           sampleResponse: {
@@ -345,7 +345,7 @@ describe("POST /api/templates/validate", () => {
         method: "POST",
         body: {
           responseTemplate: {
-            contentPath: "candidates.0.content.parts.0.text",
+            responsePath: "candidates.0.content.parts.0.text",
           },
           sampleResponse: {
             candidates: [

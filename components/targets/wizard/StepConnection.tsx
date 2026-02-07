@@ -125,7 +125,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
                 </label>
                 {field.type === "select" && field.options ? (
                   <select
-                    value={data.authConfig[field.key] || ""}
+                    value={String(data.authConfig[field.key] || "")}
                     onChange={(e) => updateAuthConfig(field.key, e.target.value)}
                     className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
@@ -139,7 +139,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
                 ) : (
                   <input
                     type={field.type === "password" ? "password" : "text"}
-                    value={data.authConfig[field.key] || ""}
+                    value={String(data.authConfig[field.key] || "")}
                     onChange={(e) => updateAuthConfig(field.key, e.target.value)}
                     placeholder={field.placeholder}
                     className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -156,7 +156,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
             <label className="block text-xs font-medium text-gray-400 mb-1">Bearer Token</label>
             <input
               type="password"
-              value={data.authConfig.token || ""}
+              value={String(data.authConfig.token || "")}
               onChange={(e) => updateAuthConfig("token", e.target.value)}
               placeholder="Your API token"
               className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -170,7 +170,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
               <label className="block text-xs font-medium text-gray-400 mb-1">API Key</label>
               <input
                 type="password"
-                value={data.authConfig.apiKey || ""}
+                value={String(data.authConfig.apiKey || "")}
                 onChange={(e) => updateAuthConfig("apiKey", e.target.value)}
                 placeholder="Your API key"
                 className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -180,7 +180,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
               <label className="block text-xs font-medium text-gray-400 mb-1">Header Name</label>
               <input
                 type="text"
-                value={data.authConfig.headerName || ""}
+                value={String(data.authConfig.headerName || "")}
                 onChange={(e) => updateAuthConfig("headerName", e.target.value)}
                 placeholder="e.g., x-api-key"
                 className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -195,7 +195,7 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
               <label className="block text-xs font-medium text-gray-400 mb-1">Username</label>
               <input
                 type="text"
-                value={data.authConfig.username || ""}
+                value={String(data.authConfig.username || "")}
                 onChange={(e) => updateAuthConfig("username", e.target.value)}
                 className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
@@ -204,13 +204,52 @@ export default function StepConnection({ data, onUpdate, onNext, onBack }: StepC
               <label className="block text-xs font-medium text-gray-400 mb-1">Password</label>
               <input
                 type="password"
-                value={data.authConfig.password || ""}
+                value={String(data.authConfig.password || "")}
                 onChange={(e) => updateAuthConfig("password", e.target.value)}
                 className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
         )}
+
+        {authFields.length === 0 && data.authType === "CUSTOM_HEADER" && (() => {
+          const headers = (data.authConfig.headers || {}) as Record<string, string>;
+          const entries = Object.entries(headers);
+          const headerName = entries[0]?.[0] || "";
+          const headerValue = entries[0]?.[1] || "";
+          return (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Header Name</label>
+                <input
+                  type="text"
+                  value={headerName}
+                  onChange={(e) => {
+                    const newHeaders: Record<string, string> = {};
+                    if (e.target.value) newHeaders[e.target.value] = headerValue;
+                    onUpdate({ authConfig: { headers: newHeaders } });
+                  }}
+                  placeholder="e.g., X-Custom-Auth"
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Header Value</label>
+                <input
+                  type="password"
+                  value={headerValue}
+                  onChange={(e) => {
+                    const newHeaders: Record<string, string> = {};
+                    if (headerName) newHeaders[headerName] = e.target.value;
+                    onUpdate({ authConfig: { headers: newHeaders } });
+                  }}
+                  placeholder="Header value"
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="flex justify-between">

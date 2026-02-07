@@ -18,7 +18,7 @@ interface TargetData {
     variables?: Record<string, unknown>;
   };
   responseTemplate: {
-    contentPath: string;
+    responsePath: string;
     tokenUsagePath?: string;
     errorPath?: string;
     transform?: string;
@@ -380,13 +380,13 @@ export default function TargetDetailPage() {
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <h3 className="text-lg font-semibold text-white mb-4">Response Template</h3>
         <div className="space-y-3">
-          {target.responseTemplate?.contentPath && (
+          {target.responseTemplate?.responsePath && (
             <div>
               <div className="text-xs text-gray-400 mb-1">
                 Content Path <span className="text-green-400">(content)</span>
               </div>
               <div className="bg-gray-900 rounded px-3 py-2 font-mono text-sm text-gray-200">
-                {target.responseTemplate.contentPath}
+                {target.responseTemplate.responsePath}
               </div>
             </div>
           )}

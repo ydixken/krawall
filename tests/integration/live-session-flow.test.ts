@@ -43,7 +43,7 @@ function validTargetPayload(overrides: Record<string, unknown> = {}) {
       structure: { message: "" },
     },
     responseTemplate: {
-      contentPath: "$.response",
+      responsePath: "$.response",
     },
     ...overrides,
   };

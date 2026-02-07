@@ -21,7 +21,7 @@ export interface ProviderPreset {
     variables?: Record<string, unknown>;
   };
   responseTemplate: {
-    contentPath: string;
+    responsePath: string;
     tokenUsagePath?: string;
     errorPath?: string;
   };
@@ -67,7 +67,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       variables: { model: "gpt-4" },
     },
     responseTemplate: {
-      contentPath: "choices.0.message.content",
+      responsePath: "choices.0.message.content",
       tokenUsagePath: "usage",
       errorPath: "error.message",
     },
@@ -143,7 +143,7 @@ Check your organization's rate limits at the OpenAI dashboard.`,
       variables: { model: "claude-sonnet-4-5-20250929" },
     },
     responseTemplate: {
-      contentPath: "content.0.text",
+      responsePath: "content.0.text",
       tokenUsagePath: "usage",
       errorPath: "error.message",
     },
@@ -212,7 +212,7 @@ Pass it via the \`x-api-key\` header. Also requires \`anthropic-version\` header
       },
     },
     responseTemplate: {
-      contentPath: "candidates.0.content.parts.0.text",
+      responsePath: "candidates.0.content.parts.0.text",
       tokenUsagePath: "usageMetadata",
       errorPath: "error.message",
     },
@@ -288,7 +288,7 @@ Set the endpoint to include the model name, e.g.:
       },
     },
     responseTemplate: {
-      contentPath: "choices.0.message.content",
+      responsePath: "choices.0.message.content",
       tokenUsagePath: "usage",
       errorPath: "error.message",
     },
@@ -351,7 +351,7 @@ Same as OpenAI Chat Completions:
       variables: { model: "llama3" },
     },
     responseTemplate: {
-      contentPath: "message.content",
+      responsePath: "message.content",
       errorPath: "error",
     },
     documentation: `## Ollama
@@ -410,22 +410,14 @@ Install models with \`ollama pull <model>\`:
       },
     ],
     requestTemplate: {
-      messagePath: "input.text",
+      messagePath: "",
       structure: {
-        input: {
-          text: "{{message}}",
-          language: "en",
-        },
-        config: {
-          max_tokens: 512,
-          temperature: 0.7,
-        },
+        message: "{{message}}",
       },
     },
     responseTemplate: {
-      contentPath: "output.text",
-      tokenUsagePath: "usage",
-      errorPath: "error.message",
+      responsePath: "",
+      errorPath: "",
     },
     documentation: `## Custom HTTP Endpoint
 
@@ -440,19 +432,12 @@ The \`messagePath\` tells Krawall where to insert the test message.
 The \`structure\` is the base JSON payload sent to your API.
 
 ### Response Template
-The \`contentPath\` tells Krawall where to find the response text.
+The \`responsePath\` tells Krawall where to find the response text.
 The \`tokenUsagePath\` (optional) extracts token usage metrics.
 The \`errorPath\` (optional) extracts error messages from failed requests.`,
     exampleResponse: {
-      output: {
-        text: "Hello! I'm your assistant. How can I help you today?",
-        confidence: 0.95,
-      },
-      usage: {
-        prompt_tokens: 12,
-        completion_tokens: 15,
-        total_tokens: 27,
-      },
+      response: "Hello! How can I help you today?",
+      error: null,
     },
   },
 
@@ -482,7 +467,7 @@ The \`errorPath\` (optional) extracts error messages from failed requests.`,
       },
     },
     responseTemplate: {
-      contentPath: "data.content",
+      responsePath: "data.content",
       errorPath: "error.message",
     },
     documentation: `## Custom WebSocket Endpoint
@@ -535,7 +520,7 @@ Messages are sent as JSON frames.
       },
     },
     responseTemplate: {
-      contentPath: "content",
+      responsePath: "content",
       errorPath: "error",
     },
     documentation: `## Custom gRPC Endpoint

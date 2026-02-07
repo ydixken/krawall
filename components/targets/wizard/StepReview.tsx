@@ -39,11 +39,13 @@ export default function StepReview({ data, onBack }: StepReviewProps) {
       };
     }
     if (data.authType === "CUSTOM_HEADER") {
-      // Build headers object from individual field entries
+      if (data.authConfig.headers && typeof data.authConfig.headers === "object") {
+        return { headers: data.authConfig.headers };
+      }
       const headers: Record<string, string> = {};
       for (const field of preset.authFields) {
         if (data.authConfig[field.key]) {
-          headers[field.key] = data.authConfig[field.key];
+          headers[field.key] = String(data.authConfig[field.key]);
         }
       }
       return { headers };
@@ -253,7 +255,7 @@ export default function StepReview({ data, onBack }: StepReviewProps) {
           <h3 className="text-sm font-semibold text-gray-400 mb-3">Response Template</h3>
           <div className="space-y-1 text-xs">
             <div className="text-gray-400">
-              contentPath: <code className="text-green-400">{data.responseTemplate.contentPath}</code>
+              responsePath: <code className="text-green-400">{data.responseTemplate.responsePath}</code>
             </div>
             {data.responseTemplate.tokenUsagePath && (
               <div className="text-gray-400">

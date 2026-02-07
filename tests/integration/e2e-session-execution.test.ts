@@ -28,7 +28,7 @@ describe("E2E Session Execution", () => {
           },
         },
         responseTemplate: {
-          contentPath: "content",
+          responsePath: "content",
           tokenUsagePath: "usage",
         },
         protocolConfig: {},

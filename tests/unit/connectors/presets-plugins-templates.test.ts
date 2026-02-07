@@ -115,7 +115,7 @@ describe("Provider Presets", () => {
         expect(preset.requestTemplate).toBeDefined();
         expect(preset.requestTemplate.messagePath).toBeTruthy();
         expect(preset.responseTemplate).toBeDefined();
-        expect(preset.responseTemplate.contentPath).toBeTruthy();
+        expect(preset.responseTemplate.responsePath).toBeTruthy();
         expect(preset.documentation).toBeTruthy();
         expect(preset.exampleResponse).toBeDefined();
       });
@@ -124,7 +124,7 @@ describe("Provider Presets", () => {
 
   describe("each preset's templates extract correctly from exampleResponse", () => {
     for (const preset of PROVIDER_PRESETS) {
-      it(`${preset.id}: contentPath extracts from exampleResponse`, () => {
+      it(`${preset.id}: responsePath extracts from exampleResponse`, () => {
         const config = makeConfig(preset);
         const connector = new TestConnector("test", config);
 
@@ -179,7 +179,7 @@ describe("BaseConnector.applyRequestTemplate()", () => {
         messagePath: "messages.0.content",
         structure: { messages: [{ role: "user", content: "" }] },
       },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -198,7 +198,7 @@ describe("BaseConnector.applyRequestTemplate()", () => {
         messagePath: "message",
         structure: { message: "" },
       },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -217,7 +217,7 @@ describe("BaseConnector.applyRequestTemplate()", () => {
         messagePath: "message",
         structure,
       },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -246,13 +246,13 @@ describe("BaseConnector.extractResponse()", () => {
     });
   }
 
-  it("should throw when contentPath leads to undefined", () => {
+  it("should throw when responsePath leads to undefined", () => {
     const config: ConnectorConfig = {
       endpoint: "http://localhost",
       authType: "NONE",
       authConfig: {},
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "nonexistent.path.here" },
+      responseTemplate: { responsePath: "nonexistent.path.here" },
     };
 
     const connector = new TestConnector("test", config);
@@ -268,7 +268,7 @@ describe("BaseConnector.extractResponse()", () => {
       authType: "NONE",
       authConfig: {},
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "content" },
+      responseTemplate: { responsePath: "content" },
     };
 
     const connector = new TestConnector("test", config);
@@ -290,7 +290,7 @@ describe("BaseConnector.buildAuthHeaders()", () => {
       authType: "NONE",
       authConfig: {},
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -305,7 +305,7 @@ describe("BaseConnector.buildAuthHeaders()", () => {
       authType: "BEARER_TOKEN",
       authConfig: { token: "my-secret-token" },
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -320,7 +320,7 @@ describe("BaseConnector.buildAuthHeaders()", () => {
       authType: "API_KEY",
       authConfig: { apiKey: "key-123", headerName: "X-API-Key" },
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -335,7 +335,7 @@ describe("BaseConnector.buildAuthHeaders()", () => {
       authType: "BASIC_AUTH",
       authConfig: { username: "user", password: "pass" },
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -353,7 +353,7 @@ describe("BaseConnector.buildAuthHeaders()", () => {
         headers: { "x-api-key": "sk-ant-123", "anthropic-version": "2023-06-01" },
       },
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     };
 
     const connector = new TestConnector("test", config);
@@ -542,7 +542,7 @@ describe("ConnectorRegistry", () => {
         authType: "NONE",
         authConfig: {},
         requestTemplate: { messagePath: "message" },
-        responseTemplate: { contentPath: "response" },
+        responseTemplate: { responsePath: "response" },
       })
     ).toThrow("Unknown connector type: UNKNOWN_TYPE");
   });
@@ -573,7 +573,7 @@ function makePluginContext(pluginConfig?: Record<string, unknown>) {
       authType: "NONE",
       authConfig: {},
       requestTemplate: { messagePath: "message" },
-      responseTemplate: { contentPath: "response" },
+      responseTemplate: { responsePath: "response" },
     }),
     pluginConfig,
   };

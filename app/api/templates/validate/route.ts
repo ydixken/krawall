@@ -10,7 +10,7 @@ const ValidateTemplateSchema = z.object({
     .optional(),
   responseTemplate: z
     .object({
-      contentPath: z.string().min(1),
+      responsePath: z.string().min(1),
       tokenUsagePath: z.string().optional(),
       errorPath: z.string().optional(),
     })
@@ -72,22 +72,22 @@ export async function POST(request: NextRequest) {
 
     // Validate response template against sample response
     if (validated.responseTemplate && validated.sampleResponse) {
-      const { contentPath, tokenUsagePath, errorPath } = validated.responseTemplate;
+      const { responsePath, tokenUsagePath, errorPath } = validated.responseTemplate;
       const sample = validated.sampleResponse;
 
-      // Validate contentPath
-      const contentValue = getValueAtPath(sample, contentPath);
+      // Validate responsePath
+      const contentValue = getValueAtPath(sample, responsePath);
       if (contentValue !== undefined && contentValue !== null) {
         results.push({
-          field: "responseTemplate.contentPath",
+          field: "responseTemplate.responsePath",
           valid: true,
-          message: `Found content at "${contentPath}": ${truncate(String(contentValue), 100)}`,
+          message: `Found content at "${responsePath}": ${truncate(String(contentValue), 100)}`,
         });
       } else {
         results.push({
-          field: "responseTemplate.contentPath",
+          field: "responseTemplate.responsePath",
           valid: false,
-          message: `No value found at "${contentPath}"`,
+          message: `No value found at "${responsePath}"`,
           suggestion: suggestPaths(sample),
         });
       }

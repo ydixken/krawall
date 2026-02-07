@@ -84,7 +84,7 @@ const MOCK_PRESET = {
     },
   },
   responseTemplate: {
-    contentPath: "choices[0].message.content",
+    responsePath: "choices[0].message.content",
   },
   documentation: "",
   exampleResponse: {},
@@ -378,7 +378,7 @@ describe("Guide Wizard - Step 3: Provider Presets", () => {
       expect(preset.requestTemplate).toBeDefined();
       expect(preset.requestTemplate.messagePath).toBeTruthy();
       expect(preset.responseTemplate).toBeDefined();
-      expect(preset.responseTemplate.contentPath).toBeTruthy();
+      expect(preset.responseTemplate.responsePath).toBeTruthy();
     }
   });
 
@@ -413,7 +413,7 @@ describe("Guide Wizard - Step 3: Provider Presets", () => {
     expect(payload.requestTemplate.messagePath).toBe(
       "messages[-1].content"
     );
-    expect(payload.responseTemplate.contentPath).toBe(
+    expect(payload.responseTemplate.responsePath).toBe(
       "choices[0].message.content"
     );
   });
@@ -778,7 +778,7 @@ describe("Guide Wizard - Target Creation Payload", () => {
       "OAUTH2",
     ]).toContain(payload.authType);
     expect(payload.requestTemplate.messagePath).toBeTruthy();
-    expect(payload.responseTemplate.contentPath).toBeTruthy();
+    expect(payload.responseTemplate.responsePath).toBeTruthy();
   });
 
   it("should construct correct payload from OpenAI preset", () => {
@@ -1061,7 +1061,7 @@ describe("POST /api/guide/create-target", () => {
         },
       },
       responseTemplate: {
-        contentPath: "choices[0].message.content",
+        responsePath: "choices[0].message.content",
       },
     };
 

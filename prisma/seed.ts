@@ -32,7 +32,7 @@ async function main() {
         },
       },
       responseTemplate: {
-        contentPath: "$.choices[0].message.content",
+        responsePath: "$.choices[0].message.content",
         tokenUsagePath: "$.usage",
       },
       protocolConfig: {

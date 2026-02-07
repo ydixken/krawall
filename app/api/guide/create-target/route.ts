@@ -23,7 +23,7 @@ const GuideCreateTargetSchema = z.object({
     variables: z.record(z.unknown()).optional(),
   }),
   responseTemplate: z.object({
-    contentPath: z.string(),
+    responsePath: z.string(),
     tokenUsagePath: z.string().optional(),
     errorPath: z.string().optional(),
   }),

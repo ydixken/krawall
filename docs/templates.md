@@ -129,14 +129,14 @@ A response template tells Krawall how to extract the chatbot reply from the API 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `contentPath` | string | Yes | JSON path to the response text |
+| `responsePath` | string | Yes | JSON path to the response text |
 | `tokenUsagePath` | string | No | JSON path to token usage data |
 | `errorPath` | string | No | JSON path to error messages |
 | `transform` | string | No | Content transformation: `"none"`, `"markdown"`, `"html"` |
 
 ### Content Extraction
 
-The value at `contentPath` is extracted and converted to a string. If the value is `null` or `undefined`, an error is thrown.
+The value at `responsePath` is extracted and converted to a string. If the value is `null` or `undefined`, an error is thrown.
 
 ### Token Usage Extraction
 
@@ -160,7 +160,7 @@ If `tokenUsagePath` is set, the object at that path is extracted as token usage 
 
 ```json
 {
-  "contentPath": "choices.0.message.content",
+  "responsePath": "choices.0.message.content",
   "tokenUsagePath": "usage",
   "errorPath": "error.message"
 }
@@ -186,7 +186,7 @@ Use the `POST /api/templates/validate` endpoint to test templates before saving 
 ### What It Validates
 
 - **Request template**: Verifies the `messagePath` can be set and read back within the `structure`.
-- **Response template**: Verifies the `contentPath`, `tokenUsagePath`, and `errorPath` can extract values from a `sampleResponse`.
+- **Response template**: Verifies the `responsePath`, `tokenUsagePath`, and `errorPath` can extract values from a `sampleResponse`.
 
 ### Usage
 
@@ -199,7 +199,7 @@ curl -X POST http://localhost:3000/api/templates/validate \
       "structure": { "messages": [{ "role": "user", "content": "" }] }
     },
     "responseTemplate": {
-      "contentPath": "choices.0.message.content"
+      "responsePath": "choices.0.message.content"
     },
     "sampleResponse": {
       "choices": [{ "message": { "content": "Test reply" } }]
@@ -221,7 +221,7 @@ curl -X POST http://localhost:3000/api/templates/validate \
         "message": "Path \"messages.0.content\" is valid and writable"
       },
       {
-        "field": "responseTemplate.contentPath",
+        "field": "responseTemplate.responsePath",
         "valid": true,
         "message": "Found content at \"choices.0.message.content\": Test reply"
       }
@@ -379,7 +379,7 @@ Add an entry to the `PROVIDER_PRESETS` array in `lib/connectors/presets.ts`:
     { key: "token", label: "API Key", type: "password", placeholder: "...", required: true }
   ],
   requestTemplate: { messagePath: "...", structure: { ... } },
-  responseTemplate: { contentPath: "...", tokenUsagePath: "..." },
+  responseTemplate: { responsePath: "...", tokenUsagePath: "..." },
   documentation: "## My Service\n\n...",
   exampleResponse: { ... }
 }

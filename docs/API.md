@@ -129,7 +129,7 @@ Create a new target. Auth credentials are encrypted at rest (AES-256-GCM).
 
 ```json
 {
-  "contentPath": "$.choices[0].message.content",
+  "responsePath": "$.choices[0].message.content",
   "tokenUsagePath": "$.usage",
   "errorPath": "$.error.message",
   "transform": "none"
@@ -792,7 +792,7 @@ Returns all available provider presets for quick target configuration.
         "structure": { "model": "gpt-4", "messages": [{ "role": "user", "content": "" }] }
       },
       "responseTemplate": {
-        "contentPath": "choices.0.message.content",
+        "responsePath": "choices.0.message.content",
         "tokenUsagePath": "usage",
         "errorPath": "error.message"
       },
@@ -821,7 +821,7 @@ Validates request and response templates, optionally against a sample API respon
 | requestTemplate.messagePath | string | Yes* | JSON path for message insertion |
 | requestTemplate.structure | object | No | Base JSON payload structure |
 | responseTemplate | object | No | Response template to validate |
-| responseTemplate.contentPath | string | Yes* | JSON path to extract response content |
+| responseTemplate.responsePath | string | Yes* | JSON path to extract response content |
 | responseTemplate.tokenUsagePath | string | No | JSON path to extract token usage |
 | responseTemplate.errorPath | string | No | JSON path to extract error messages |
 | sampleResponse | object | No | Sample API response to validate against |
@@ -840,7 +840,7 @@ Validates request and response templates, optionally against a sample API respon
     }
   },
   "responseTemplate": {
-    "contentPath": "choices.0.message.content",
+    "responsePath": "choices.0.message.content",
     "tokenUsagePath": "usage"
   },
   "sampleResponse": {
@@ -866,7 +866,7 @@ Validates request and response templates, optionally against a sample API respon
         "message": "Path \"messages.0.content\" is valid and writable"
       },
       {
-        "field": "responseTemplate.contentPath",
+        "field": "responseTemplate.responsePath",
         "valid": true,
         "message": "Found content at \"choices.0.message.content\": Hello!"
       },

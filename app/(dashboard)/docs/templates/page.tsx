@@ -76,7 +76,7 @@ const PROVIDER_EXAMPLES = [
 }`,
     },
     response: {
-      contentPath: "choices.0.message.content",
+      responsePath: "choices.0.message.content",
       tokenUsagePath: "usage",
       errorPath: "error.message",
       example: `{
@@ -111,7 +111,7 @@ const PROVIDER_EXAMPLES = [
 }`,
     },
     response: {
-      contentPath: "content.0.text",
+      responsePath: "content.0.text",
       tokenUsagePath: "usage",
       errorPath: "error.message",
       example: `{
@@ -138,7 +138,7 @@ const PROVIDER_EXAMPLES = [
 }`,
     },
     response: {
-      contentPath: "candidates.0.content.parts.0.text",
+      responsePath: "candidates.0.content.parts.0.text",
       tokenUsagePath: "usageMetadata",
       errorPath: "error.message",
       example: `{
@@ -173,7 +173,7 @@ const PROVIDER_EXAMPLES = [
 }`,
     },
     response: {
-      contentPath: "message.content",
+      responsePath: "message.content",
       tokenUsagePath: undefined,
       errorPath: "error",
       example: `{
@@ -455,7 +455,7 @@ export default function TemplateDocsPage() {
           <div className="bg-gray-900 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <code className="text-green-400 font-mono text-sm">
-                contentPath
+                responsePath
               </code>
               <span className="text-xs bg-red-900/50 text-red-300 px-2 py-0.5 rounded">
                 required
@@ -588,9 +588,9 @@ export default function TemplateDocsPage() {
             <div className="bg-gray-900 rounded-lg p-4 space-y-2">
               <div className="flex flex-wrap gap-4 text-xs">
                 <span className="text-gray-400">
-                  contentPath:{" "}
+                  responsePath:{" "}
                   <code className="text-green-400">
-                    {provider.response.contentPath}
+                    {provider.response.responsePath}
                   </code>
                 </span>
                 {provider.response.tokenUsagePath && (
@@ -629,7 +629,7 @@ export default function TemplateDocsPage() {
               &quot;No content found at path&quot;
             </h4>
             <p className="text-sm text-gray-400">
-              The <code className="text-blue-400">contentPath</code> does not
+              The <code className="text-blue-400">responsePath</code> does not
               match the actual API response structure. Use the Test Connection
               button to see the raw response and verify the path is correct.
               Check for typos in field names and correct array indices.

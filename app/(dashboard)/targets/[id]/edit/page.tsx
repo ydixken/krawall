@@ -18,7 +18,7 @@ interface TargetData {
     variables?: Record<string, unknown>;
   };
   responseTemplate: {
-    contentPath: string;
+    responsePath: string;
     tokenUsagePath?: string;
     errorPath?: string;
   };
@@ -72,7 +72,7 @@ export default function EditTargetPage() {
   const [authConfig, setAuthConfig] = useState<Record<string, string>>({});
   const [messagePath, setMessagePath] = useState("");
   const [structureJson, setStructureJson] = useState("");
-  const [contentPath, setContentPath] = useState("");
+  const [responsePath, setContentPath] = useState("");
   const [tokenUsagePath, setTokenUsagePath] = useState("");
   const [errorPath, setErrorPath] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -111,7 +111,7 @@ export default function EditTargetPage() {
             ? JSON.stringify(t.requestTemplate.structure, null, 2)
             : "{}"
         );
-        setContentPath(t.responseTemplate?.contentPath || "");
+        setContentPath(t.responseTemplate?.responsePath || "");
         setTokenUsagePath(t.responseTemplate?.tokenUsagePath || "");
         setErrorPath(t.responseTemplate?.errorPath || "");
         setIsActive(t.isActive);
@@ -158,7 +158,7 @@ export default function EditTargetPage() {
             structure,
           },
           responseTemplate: {
-            contentPath,
+            responsePath,
             tokenUsagePath: tokenUsagePath || undefined,
             errorPath: errorPath || undefined,
           },
@@ -443,7 +443,7 @@ export default function EditTargetPage() {
           </label>
           <input
             type="text"
-            value={contentPath}
+            value={responsePath}
             onChange={(e) => setContentPath(e.target.value)}
             className="w-full bg-gray-900 border border-green-800/50 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-green-500"
           />

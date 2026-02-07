@@ -107,31 +107,45 @@ export function TemplateHelp() {
               in the JSON response.
             </p>
 
-            <div className="rounded-md bg-gray-900 border border-gray-800 p-3 font-mono text-[11px] leading-relaxed">
-              <div className="text-gray-600 mb-1">{"// API response from your chatbot"}</div>
-              <div className="text-gray-300">{"{"}</div>
-              <div className="text-gray-300 pl-4">{'"choices": [{'}</div>
-              <div className="text-gray-300 pl-8">{'"message": {'}</div>
-              <div className="pl-12">
-                <span className="text-gray-300">{'"content": '}</span>
-                <span className="text-emerald-400 bg-emerald-500/10 px-1 rounded">{'"I\'m doing well!"'}</span>
-                <span className="text-gray-600">{" \u2190 contentPath extracts this"}</span>
+            {/* Visual: API response → Krawall extracts → reply text */}
+            <div className="space-y-2">
+              <div className="rounded-md bg-gray-900 border border-gray-800 p-3 font-mono text-[11px] leading-relaxed">
+                <div className="text-gray-600 mb-1">{"// Your API returns this JSON"}</div>
+                <div className="text-gray-300">{"{"}</div>
+                <div className="text-gray-300 pl-4">{'"choices": [{'}</div>
+                <div className="text-gray-300 pl-8">{'"message": {'}</div>
+                <div className="pl-12">
+                  <span className="text-gray-300">{'"content": '}</span>
+                  <span className="text-emerald-400 bg-emerald-500/10 px-1 rounded">{'"I\'m doing well!"'}</span>
+                </div>
+                <div className="text-gray-300 pl-8">{"}"}</div>
+                <div className="text-gray-300 pl-4">{"}],"}</div>
+                <div className="pl-4">
+                  <span className="text-gray-500">{'"usage": { "prompt_tokens": 10, ... }'}</span>
+                </div>
+                <div className="text-gray-300">{"}"}</div>
               </div>
-              <div className="text-gray-300 pl-8">{"}"}</div>
-              <div className="text-gray-300 pl-4">{"}],"}</div>
-              <div className="pl-4">
-                <span className="text-gray-500">{'"usage": { "prompt_tokens": 10, ... }'}</span>
-                <span className="text-gray-600">{" \u2190 tokenUsagePath"}</span>
+
+              <div className="flex justify-center">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <ArrowDown className="h-3.5 w-3.5" />
+                  <span className="text-[10px]">Krawall extracts the value at <code className="text-emerald-400">responsePath</code></span>
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </div>
               </div>
-              <div className="text-gray-300">{"}"}</div>
+
+              <div className="rounded-md bg-gray-900 border border-emerald-500/20 p-3 font-mono text-[11px] leading-relaxed">
+                <div className="text-gray-600 mb-1">{"// What Krawall reads as the chatbot's reply"}</div>
+                <div className="text-emerald-400">{'"I\'m doing well!"'}</div>
+              </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-start gap-2 text-gray-500">
                 <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-emerald-400 shrink-0" />
                 <span>
-                  <strong className="text-gray-300">contentPath</strong> &mdash; path to the reply text.
-                  Example: <code className="text-gray-300">choices.0.message.content</code>
+                  <strong className="text-gray-300">responsePath</strong> &mdash; path to the reply text.
+                  For the example above: <code className="text-gray-300">choices.0.message.content</code>
                 </span>
               </div>
               <div className="flex items-start gap-2 text-gray-500">

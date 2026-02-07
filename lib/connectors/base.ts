@@ -85,10 +85,10 @@ export abstract class BaseConnector {
     const template = this.config.responseTemplate;
 
     try {
-      const content = this.getValueAtPath(rawResponse, template.contentPath);
+      const content = this.getValueAtPath(rawResponse, template.responsePath);
 
       if (content === undefined || content === null) {
-        throw new Error(`No content found at path: ${template.contentPath}`);
+        throw new Error(`No content found at path: ${template.responsePath}`);
       }
 
       // Transform content if needed
@@ -278,7 +278,7 @@ export interface RequestTemplate {
  * Response Template Interface
  */
 export interface ResponseTemplate {
-  contentPath: string; // JSON path to extract response content
+  responsePath: string; // JSON path to extract response content
   tokenUsagePath?: string; // JSON path to extract token usage
   errorPath?: string; // JSON path to extract error messages
   transform?: "none" | "markdown" | "html"; // Content transformation

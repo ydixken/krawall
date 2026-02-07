@@ -27,7 +27,7 @@ describe("HTTPConnector", () => {
           structure: { message: "" },
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
       };
 
@@ -47,7 +47,7 @@ describe("HTTPConnector", () => {
           structure: {},
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
       };
 
@@ -70,7 +70,7 @@ describe("HTTPConnector", () => {
           structure: { message: "" },
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
         protocolConfig: {
           method: "POST",
@@ -102,7 +102,7 @@ describe("HTTPConnector", () => {
           },
         },
         responseTemplate: {
-          contentPath: "$.choices[0].message.content",
+          responsePath: "$.choices[0].message.content",
           tokenUsagePath: "$.usage",
         },
         protocolConfig: {
@@ -132,7 +132,7 @@ describe("HTTPConnector", () => {
           },
         },
         responseTemplate: {
-          contentPath: "$.choices[0].message.content",
+          responsePath: "$.choices[0].message.content",
           tokenUsagePath: "$.usage",
         },
         protocolConfig: {
@@ -161,7 +161,7 @@ describe("HTTPConnector", () => {
           structure: { message: "" },
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
         protocolConfig: {
           path: "/chat",
@@ -187,7 +187,7 @@ describe("HTTPConnector", () => {
           structure: { message: "" },
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
         protocolConfig: {
           path: "/error",
@@ -212,7 +212,7 @@ describe("HTTPConnector", () => {
           structure: {},
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
       };
 
@@ -234,7 +234,7 @@ describe("HTTPConnector", () => {
           structure: {},
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
         timeout: 1000,
       };
@@ -258,7 +258,7 @@ describe("HTTPConnector", () => {
           structure: {},
         },
         responseTemplate: {
-          contentPath: "$.response",
+          responsePath: "$.response",
         },
       };
 

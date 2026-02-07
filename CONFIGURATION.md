@@ -136,7 +136,7 @@ Templates use JSON Path expressions to map request/response bodies:
 
 // Response template (how to extract responses)
 {
-  "contentPath": "$.choices[0].message.content",
+  "responsePath": "$.choices[0].message.content",
   "tokenUsagePath": "$.usage"
 }
 ```

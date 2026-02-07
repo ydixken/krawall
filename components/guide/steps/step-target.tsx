@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProviderCard, MockChatbotCard } from "../shared/provider-card";
 import { JsonPreview } from "../shared/json-preview";
+import { JsonEditor } from "../shared/json-editor";
 import { TemplateHelp } from "../shared/template-help";
 import { useWizard } from "../wizard-context";
 import { useToast } from "@/components/ui/toast";
@@ -21,6 +22,14 @@ import {
 } from "lucide-react";
 
 type SubStep = "choose" | "configure" | "review";
+
+const AUTH_TYPES = [
+  { value: "NONE", label: "None" },
+  { value: "BEARER_TOKEN", label: "Bearer Token" },
+  { value: "API_KEY", label: "API Key" },
+  { value: "BASIC_AUTH", label: "Basic Auth" },
+  { value: "CUSTOM_HEADER", label: "Custom Headers" },
+];
 
 // Mock chatbot as a pseudo-preset
 const MOCK_PRESET: ProviderPreset = {
@@ -40,7 +49,7 @@ const MOCK_PRESET: ProviderPreset = {
     },
   },
   responseTemplate: {
-    contentPath: "choices.0.message.content",
+    responsePath: "choices.0.message.content",
   },
   documentation: "",
   exampleResponse: {},
@@ -52,13 +61,22 @@ interface TargetForm {
   endpoint: string;
   connectorType: string;
   authType: string;
-  authConfig: Record<string, string>;
-  requestTemplate: any;
-  responseTemplate: any;
+  authConfig: Record<string, unknown>;
+  requestTemplate: {
+    messagePath: string;
+    structure: Record<string, unknown>;
+    variables?: Record<string, unknown>;
+  };
+  responseTemplate: {
+    responsePath: string;
+    tokenUsagePath?: string;
+    errorPath?: string;
+  };
+  structureJson: string;
 }
 
 function presetToForm(preset: ProviderPreset): TargetForm {
-  const authConfig: Record<string, string> = {};
+  const authConfig: Record<string, unknown> = {};
   for (const field of preset.authFields) {
     authConfig[field.key] = "";
   }
@@ -71,6 +89,7 @@ function presetToForm(preset: ProviderPreset): TargetForm {
     authConfig,
     requestTemplate: preset.requestTemplate,
     responseTemplate: preset.responseTemplate,
+    structureJson: JSON.stringify(preset.requestTemplate.structure || {}, null, 2),
   };
 }
 
@@ -101,7 +120,8 @@ export function StepTarget() {
     setSelectedPresetId(id);
     const preset = id === "mock-chatbot" ? MOCK_PRESET : PROVIDER_PRESETS.find((p) => p.id === id);
     if (preset) {
-      setForm(presetToForm(preset));
+      const newForm = presetToForm(preset);
+      setForm(newForm);
     }
   };
 
@@ -302,40 +322,238 @@ export function StepTarget() {
               </div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-300 mb-1.5 block">Auth Type</label>
-                <div className="px-3 py-2 rounded-md border border-gray-700 bg-gray-800 text-sm text-gray-400">
-                  {form.authType === "NONE" ? "None" : form.authType.replace(/_/g, " ")}
-                </div>
+                <select
+                  value={form.authType}
+                  onChange={(e) => setForm({ ...form, authType: e.target.value, authConfig: {} })}
+                  className="w-full px-3 py-2 rounded-md border border-gray-700 bg-gray-800 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {AUTH_TYPES.map((at) => (
+                    <option key={at.value} value={at.value}>{at.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             {/* Auth fields */}
-            {Object.keys(form.authConfig).length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
-                {(() => {
-                  const preset = selectedPresetId === "mock-chatbot" ? MOCK_PRESET : PROVIDER_PRESETS.find((p) => p.id === selectedPresetId);
-                  return preset?.authFields.map((field) => (
-                    <Input
-                      key={field.key}
-                      label={field.label}
-                      type={field.type === "password" ? "password" : "text"}
-                      value={form.authConfig[field.key] || ""}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          authConfig: { ...form.authConfig, [field.key]: e.target.value },
-                        })
-                      }
-                      placeholder={field.placeholder}
-                    />
-                  ));
-                })()}
-              </div>
-            )}
+            {(() => {
+              const preset = selectedPresetId === "mock-chatbot" ? MOCK_PRESET : PROVIDER_PRESETS.find((p) => p.id === selectedPresetId);
+              const usePresetFields = preset && preset.authFields.length > 0 && form.authType === preset.authType;
 
-            {/* Request/Response template previews */}
-            <JsonPreview data={form.requestTemplate} title="Request Template" />
-            <JsonPreview data={form.responseTemplate} title="Response Template" />
+              if (usePresetFields) {
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
+                    {preset.authFields.map((field) => (
+                      <Input
+                        key={field.key}
+                        label={field.label}
+                        type={field.type === "password" ? "password" : "text"}
+                        value={String(form.authConfig[field.key] || "")}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            authConfig: { ...form.authConfig, [field.key]: e.target.value },
+                          })
+                        }
+                        placeholder={field.placeholder}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
+              if (form.authType === "BEARER_TOKEN") {
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
+                    <Input
+                      label="Bearer Token"
+                      type="password"
+                      value={String(form.authConfig.token || "")}
+                      onChange={(e) => setForm({ ...form, authConfig: { ...form.authConfig, token: e.target.value } })}
+                      placeholder="Your API token"
+                    />
+                  </div>
+                );
+              }
+
+              if (form.authType === "API_KEY") {
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
+                    <Input
+                      label="API Key"
+                      type="password"
+                      value={String(form.authConfig.apiKey || "")}
+                      onChange={(e) => setForm({ ...form, authConfig: { ...form.authConfig, apiKey: e.target.value } })}
+                      placeholder="Your API key"
+                    />
+                    <Input
+                      label="Header Name"
+                      value={String(form.authConfig.headerName || "")}
+                      onChange={(e) => setForm({ ...form, authConfig: { ...form.authConfig, headerName: e.target.value } })}
+                      placeholder="e.g., x-api-key"
+                    />
+                  </div>
+                );
+              }
+
+              if (form.authType === "BASIC_AUTH") {
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
+                    <Input
+                      label="Username"
+                      value={String(form.authConfig.username || "")}
+                      onChange={(e) => setForm({ ...form, authConfig: { ...form.authConfig, username: e.target.value } })}
+                    />
+                    <Input
+                      label="Password"
+                      type="password"
+                      value={String(form.authConfig.password || "")}
+                      onChange={(e) => setForm({ ...form, authConfig: { ...form.authConfig, password: e.target.value } })}
+                    />
+                  </div>
+                );
+              }
+
+              if (form.authType === "CUSTOM_HEADER") {
+                const headers = (form.authConfig.headers || {}) as Record<string, string>;
+                const entries = Object.entries(headers);
+                const headerName = entries[0]?.[0] || "";
+                const headerValue = entries[0]?.[1] || "";
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-300">Authentication</h4>
+                    <Input
+                      label="Header Name"
+                      value={headerName}
+                      onChange={(e) => {
+                        const newHeaders: Record<string, string> = {};
+                        if (e.target.value) newHeaders[e.target.value] = headerValue;
+                        setForm({ ...form, authConfig: { headers: newHeaders } });
+                      }}
+                      placeholder="e.g., X-Custom-Auth"
+                    />
+                    <Input
+                      label="Header Value"
+                      type="password"
+                      value={headerValue}
+                      onChange={(e) => {
+                        const newHeaders: Record<string, string> = {};
+                        if (headerName) newHeaders[headerName] = e.target.value;
+                        setForm({ ...form, authConfig: { headers: newHeaders } });
+                      }}
+                      placeholder="Header value"
+                    />
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+            {/* Request Template */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-300">Request Template</h4>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  Message Path <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.requestTemplate.messagePath}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      requestTemplate: { ...form.requestTemplate, messagePath: e.target.value },
+                    })
+                  }
+                  placeholder="e.g., messages.0.content"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  Request Structure (JSON)
+                </label>
+                <JsonEditor
+                  value={form.structureJson}
+                  onChange={(raw, parsed) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      structureJson: raw,
+                      ...(parsed ? { requestTemplate: { ...prev.requestTemplate, structure: parsed } } : {}),
+                    }));
+                  }}
+                  rows={6}
+                  placeholder='{ "message": "{{message}}" }'
+                />
+                <p className="text-[10px] text-gray-600 mt-1">
+                  JSON body sent to your API. Krawall injects the message at the path above.
+                </p>
+              </div>
+            </div>
+
+            {/* Response Template */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-300">Response Template</h4>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  Response Path <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.responseTemplate.responsePath}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      responseTemplate: { ...form.responseTemplate, responsePath: e.target.value },
+                    })
+                  }
+                  placeholder="e.g., choices.0.message.content"
+                  className="w-full bg-gray-900 border border-emerald-800/50 rounded-md px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  Token Usage Path <span className="text-blue-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.responseTemplate.tokenUsagePath || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      responseTemplate: { ...form.responseTemplate, tokenUsagePath: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., usage"
+                  className="w-full bg-gray-900 border border-blue-800/50 rounded-md px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">
+                  Error Path
+                </label>
+                <input
+                  type="text"
+                  value={form.responseTemplate.errorPath || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      responseTemplate: { ...form.responseTemplate, errorPath: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., error.message"
+                  className="w-full bg-gray-900 border border-red-800/50 rounded-md px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-red-500"
+                />
+              </div>
+              <p className="text-[10px] text-gray-600">
+                Dot-notation paths to extract values from the API response.
+              </p>
+            </div>
+
             <TemplateHelp />
           </div>
 
@@ -344,7 +562,7 @@ export function StepTarget() {
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
-            <Button size="sm" onClick={() => setSubStep("review")} disabled={!form.name || !form.endpoint}>
+            <Button size="sm" onClick={() => setSubStep("review")} disabled={!form.name || !form.endpoint || !form.responseTemplate.responsePath}>
               Review
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>

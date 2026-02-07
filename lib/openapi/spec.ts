@@ -126,7 +126,7 @@ export function getOpenAPISpec() {
                     structure: { model: "gpt-4", messages: [{ role: "user", content: "{{message}}" }] },
                   },
                   responseTemplate: {
-                    contentPath: "choices[0].message.content",
+                    responsePath: "choices[0].message.content",
                     tokenUsagePath: "usage",
                   },
                 },
@@ -1125,9 +1125,9 @@ export function getOpenAPISpec() {
             },
             responseTemplate: {
               type: "object",
-              required: ["contentPath"],
+              required: ["responsePath"],
               properties: {
-                contentPath: { type: "string" },
+                responsePath: { type: "string" },
                 tokenUsagePath: { type: "string" },
                 errorPath: { type: "string" },
                 transform: { type: "string", enum: ["none", "markdown", "html"] },

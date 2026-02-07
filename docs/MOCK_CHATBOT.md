@@ -392,7 +392,7 @@ In the Krawall UI, create a new target with these settings:
 
 ```json
 {
-  "contentPath": "choices[0].message.content",
+  "responsePath": "choices[0].message.content",
   "tokenUsagePath": "usage"
 }
 ```

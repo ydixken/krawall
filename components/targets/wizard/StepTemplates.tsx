@@ -56,7 +56,7 @@ export default function StepTemplates({ data, onUpdate, onNext, onBack }: StepTe
             structure: data.requestTemplate.structure,
           },
           responseTemplate: {
-            contentPath: data.responseTemplate.contentPath,
+            responsePath: data.responseTemplate.responsePath,
             tokenUsagePath: data.responseTemplate.tokenUsagePath || undefined,
             errorPath: data.responseTemplate.errorPath || undefined,
           },
@@ -86,7 +86,7 @@ export default function StepTemplates({ data, onUpdate, onNext, onBack }: StepTe
     if (!exampleResponse) return null;
 
     try {
-      const parts = data.responseTemplate.contentPath
+      const parts = data.responseTemplate.responsePath
         .replace(/^\$\./, "")
         .split(/[.\[\]]/)
         .filter(Boolean);
@@ -176,8 +176,8 @@ export default function StepTemplates({ data, onUpdate, onNext, onBack }: StepTe
           </label>
           <input
             type="text"
-            value={data.responseTemplate.contentPath}
-            onChange={(e) => updateResponseTemplate("contentPath", e.target.value)}
+            value={data.responseTemplate.responsePath}
+            onChange={(e) => updateResponseTemplate("responsePath", e.target.value)}
             placeholder="e.g., choices.0.message.content"
             className="w-full bg-gray-900 border border-green-800/50 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-green-500"
           />
@@ -271,7 +271,7 @@ export default function StepTemplates({ data, onUpdate, onNext, onBack }: StepTe
         </button>
         <button
           onClick={onNext}
-          disabled={!data.responseTemplate.contentPath || !data.requestTemplate.messagePath}
+          disabled={!data.responseTemplate.responsePath || !data.requestTemplate.messagePath}
           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
         >
           Next: Review &amp; Save

@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: Record<string, { value: unknown; category: string }> = {
     category: "defaults",
   },
   "defaults.responseTemplate": {
-    value: { contentPath: "response" },
+    value: { responsePath: "response" },
     category: "defaults",
   },
 };

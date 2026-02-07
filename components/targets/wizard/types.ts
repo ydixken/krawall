@@ -13,7 +13,7 @@ export interface ProviderPreset {
     variables?: Record<string, unknown>;
   };
   responseTemplate: {
-    contentPath: string;
+    responsePath: string;
     tokenUsagePath?: string;
     errorPath?: string;
   };
@@ -39,7 +39,7 @@ export interface WizardData {
   name: string;
   endpoint: string;
   authType: string;
-  authConfig: Record<string, string>;
+  authConfig: Record<string, unknown>;
   connectorType: string;
 
   // Step 3: Templates
@@ -49,7 +49,7 @@ export interface WizardData {
     variables?: Record<string, unknown>;
   };
   responseTemplate: {
-    contentPath: string;
+    responsePath: string;
     tokenUsagePath?: string;
     errorPath?: string;
   };
@@ -68,6 +68,6 @@ export const INITIAL_WIZARD_DATA: WizardData = {
     structure: { message: "" },
   },
   responseTemplate: {
-    contentPath: "response",
+    responsePath: "response",
   },
 };
