@@ -5,20 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useWizard } from "../wizard-context";
 import { STEPS } from "../wizard-shell";
 
-interface StepNavigationProps {
-  canProceed?: boolean;
-  showSkip?: boolean;
-  nextLabel?: string;
-  onNext?: () => void;
-}
-
-export function StepNavigation({
-  canProceed = true,
-  showSkip,
-  nextLabel,
-  onNext,
-}: StepNavigationProps) {
-  const { currentStep, goBack, goNext, skip, totalSteps } = useWizard();
+export function StepNavigation() {
+  const { currentStep, goBack, goNext, skip, totalSteps, navProps } = useWizard();
+  const { canProceed = true, showSkip, nextLabel, onNext } = navProps;
   const step = STEPS[currentStep];
   const canSkip = showSkip ?? step?.canSkip ?? false;
   const isFirst = currentStep === 0;
@@ -33,7 +22,7 @@ export function StepNavigation({
   };
 
   return (
-    <div className="flex items-center justify-between border-t border-gray-800 pt-4 mt-6">
+    <div className="flex items-center justify-between">
       <div>
         {!isFirst && (
           <Button variant="ghost" size="sm" onClick={goBack}>

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Loader2, MessageSquare, Clock, Coins, AlertTriangle, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { StepNavigation } from "../shared/step-navigation";
 import { useWizard } from "../wizard-context";
 
 interface SessionMetrics {
@@ -16,7 +15,7 @@ interface SessionMetrics {
 }
 
 export function StepResults() {
-  const { createdSessionId, markComplete, currentStep, goNext } = useWizard();
+  const { createdSessionId, markComplete, currentStep, goNext, setNavProps } = useWizard();
   const [metrics, setMetrics] = useState<SessionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,14 +63,28 @@ export function StepResults() {
     return () => clearInterval(interval);
   }, [createdSessionId]);
 
+  // Set nav props
+  useEffect(() => {
+    if (!createdSessionId) {
+      setNavProps({ canProceed: true, showSkip: true });
+    } else {
+      setNavProps({
+        canProceed: !loading,
+        onNext: () => {
+          markComplete(currentStep);
+          goNext();
+        },
+      });
+    }
+  }, [createdSessionId, loading, currentStep, markComplete, goNext, setNavProps]);
+
   if (!createdSessionId) {
     return (
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="text-center py-12 text-gray-500">
+      <div className="max-w-xl mx-auto space-y-4">
+        <div className="text-center py-8 text-gray-500">
           <p className="text-sm">No session to show results for.</p>
           <p className="text-xs mt-1">Run a test in the previous step first.</p>
         </div>
-        <StepNavigation canProceed showSkip />
       </div>
     );
   }
@@ -92,7 +105,7 @@ export function StepResults() {
     : 1;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-100 mb-1">Results</h2>
@@ -154,7 +167,7 @@ export function StepResults() {
           {metrics.responseTimes.length > 0 && (
             <Card className="!p-4">
               <h3 className="text-xs font-medium text-gray-400 mb-3">Response Times</h3>
-              <div className="flex items-end gap-1 h-32">
+              <div className="flex items-end gap-1 h-24">
                 {metrics.responseTimes.map((time, i) => {
                   const height = Math.max(4, (time / maxResponseTime) * 100);
                   return (
@@ -202,13 +215,6 @@ export function StepResults() {
         </>
       )}
 
-      <StepNavigation
-        canProceed={!loading}
-        onNext={() => {
-          markComplete(currentStep);
-          goNext();
-        }}
-      />
     </div>
   );
 }

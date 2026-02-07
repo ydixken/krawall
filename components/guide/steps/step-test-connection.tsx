@@ -4,13 +4,23 @@ import { useState, useEffect } from "react";
 import { Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ConnectionTester } from "../shared/connection-tester";
-import { StepNavigation } from "../shared/step-navigation";
 import { useWizard } from "../wizard-context";
 
 export function StepTestConnection() {
-  const { createdTargetId, markComplete, currentStep, goNext } = useWizard();
+  const { createdTargetId, markComplete, currentStep, goNext, setNavProps } = useWizard();
   const [targetInfo, setTargetInfo] = useState<{ name: string; endpoint: string } | null>(null);
   const [tested, setTested] = useState(false);
+
+  useEffect(() => {
+    setNavProps({
+      canProceed: true,
+      showSkip: true,
+      onNext: () => {
+        if (!tested) markComplete(currentStep);
+        goNext();
+      },
+    });
+  }, [tested, currentStep, markComplete, goNext, setNavProps]);
 
   useEffect(() => {
     if (!createdTargetId) return;
@@ -25,7 +35,7 @@ export function StepTestConnection() {
   }, [createdTargetId]);
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Test Connection</h2>
         <p className="text-sm text-gray-500">
@@ -60,14 +70,6 @@ export function StepTestConnection() {
         </div>
       </Card>
 
-      <StepNavigation
-        canProceed
-        showSkip
-        onNext={() => {
-          if (!tested) markComplete(currentStep);
-          goNext();
-        }}
-      />
     </div>
   );
 }

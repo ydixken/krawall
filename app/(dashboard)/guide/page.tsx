@@ -73,10 +73,11 @@ function GuideContent() {
   }, [goNext, goBack, goToStep]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3 h-full">
       <PageHeader
         title="Getting Started Guide"
         description="Set up and run your first chatbot test in minutes"
+        className="!mb-0"
         breadcrumbs={[
           { label: "Dashboard", href: "/" },
           { label: "Guide" },
@@ -92,7 +93,7 @@ function GuideContent() {
 
       {/* Welcome back banner */}
       {showWelcomeBack && (
-        <div className="animate-slideDown rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 flex items-center justify-between">
+        <div className="animate-slideDown rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 flex items-center justify-between">
           <p className="text-sm text-blue-400">
             Welcome back! You&apos;re on step {currentStep + 1}: {STEP_LABELS[currentStep]}.
           </p>
@@ -107,9 +108,11 @@ function GuideContent() {
         </div>
       )}
 
-      <WizardShell>
-        {StepComponent && <StepComponent />}
-      </WizardShell>
+      <div className="flex-1 min-h-0">
+        <WizardShell>
+          {StepComponent && <StepComponent />}
+        </WizardShell>
+      </div>
     </div>
   );
 }

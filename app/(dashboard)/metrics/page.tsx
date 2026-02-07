@@ -226,10 +226,11 @@ export default function MetricsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3 h-full">
       <PageHeader
         title="Metrics"
         description="Performance metrics, token usage, and cost analysis"
+        className="!mb-0"
         breadcrumbs={[
           { label: "Dashboard", href: "/" },
           { label: "Metrics" },
@@ -268,10 +269,10 @@ export default function MetricsPage() {
           <div className="text-gray-400">Loading metrics...</div>
         </div>
       ) : (
-        <>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
           {/* Summary Metrics */}
           {aggregate && (
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
               <MetricCard label="Total Sessions" value={aggregate.totalSessions} />
               <MetricCard
                 label="Total Messages"
@@ -300,133 +301,113 @@ export default function MetricsPage() {
           )}
 
           {/* Token Cost Estimation */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Token Cost Estimation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Input Tokens</div>
-                  <div className="text-lg font-semibold text-gray-100">
-                    {totalInputTokens.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-600">@ $0.01/1K</div>
+          <Card className="!p-3">
+            <div className="text-sm font-semibold text-gray-100 mb-2">Token Cost Estimation</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Input Tokens</div>
+                <div className="text-sm font-semibold text-gray-100">
+                  {totalInputTokens.toLocaleString()}
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Output Tokens</div>
-                  <div className="text-lg font-semibold text-gray-100">
-                    {totalOutputTokens.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-600">@ $0.03/1K</div>
+                <div className="text-[10px] text-gray-600">@ $0.01/1K</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Output Tokens</div>
+                <div className="text-sm font-semibold text-gray-100">
+                  {totalOutputTokens.toLocaleString()}
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Total Tokens</div>
-                  <div className="text-lg font-semibold text-gray-100">
-                    {(totalInputTokens + totalOutputTokens).toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Est. Cost</div>
-                  <div className="text-lg font-semibold text-emerald-400">
-                    ${estimatedCost.toFixed(4)}
-                  </div>
-                  <div className="text-[10px] text-gray-600">approximate</div>
+                <div className="text-[10px] text-gray-600">@ $0.03/1K</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Total Tokens</div>
+                <div className="text-sm font-semibold text-gray-100">
+                  {(totalInputTokens + totalOutputTokens).toLocaleString()}
                 </div>
               </div>
-            </CardContent>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Est. Cost</div>
+                <div className="text-sm font-semibold text-emerald-400">
+                  ${estimatedCost.toFixed(4)}
+                </div>
+                <div className="text-[10px] text-gray-600">approximate</div>
+              </div>
+            </div>
           </Card>
 
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Response Time Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div style={{ height: "280px" }}>
-                  <Line data={responseTimeData} options={chartOptions} />
-                </div>
-              </CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Card className="!p-3">
+              <div className="text-sm font-semibold text-gray-100 mb-2">Response Time Trends</div>
+              <div style={{ height: "200px" }}>
+                <Line data={responseTimeData} options={chartOptions} />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Token Usage</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div style={{ height: "280px" }}>
-                  <Bar
-                    data={tokenUsageData}
-                    options={chartOptions as ChartOptions<"bar">}
+            <Card className="!p-3">
+              <div className="text-sm font-semibold text-gray-100 mb-2">Token Usage</div>
+              <div style={{ height: "200px" }}>
+                <Bar
+                  data={tokenUsageData}
+                  options={chartOptions as ChartOptions<"bar">}
+                />
+              </div>
+            </Card>
+
+            <Card className="!p-3">
+              <div className="text-sm font-semibold text-gray-100 mb-2">Success vs Errors</div>
+              <div className="flex items-center justify-center" style={{ height: "200px" }}>
+                <div style={{ width: "180px", height: "180px" }}>
+                  <Doughnut
+                    data={errorRateData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { labels: { color: "#9ca3af", font: { size: 11 } } },
+                      },
+                    }}
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Success vs Errors</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center" style={{ height: "280px" }}>
-                  <div style={{ width: "240px", height: "240px" }}>
-                    <Doughnut
-                      data={errorRateData}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: { labels: { color: "#9ca3af", font: { size: 11 } } },
-                        },
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
+              </div>
             </Card>
 
             {/* Recent Sessions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Sessions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-auto" style={{ maxHeight: "280px" }}>
-                  <table className="w-full text-sm">
-                    <thead className="text-gray-500 border-b border-gray-800">
-                      <tr>
-                        <th className="text-left py-2 text-xs font-medium">Target</th>
-                        <th className="text-left py-2 text-xs font-medium">Scenario</th>
-                        <th className="text-right py-2 text-xs font-medium">Msgs</th>
-                        <th className="text-right py-2 text-xs font-medium">Tokens</th>
-                        <th className="text-right py-2 text-xs font-medium">Errors</th>
+            <Card className="!p-3">
+              <div className="text-sm font-semibold text-gray-100 mb-2">Recent Sessions</div>
+              <div className="overflow-auto" style={{ maxHeight: "200px" }}>
+                <table className="w-full text-sm">
+                  <thead className="text-gray-500 border-b border-gray-800">
+                    <tr>
+                      <th className="text-left py-1.5 text-xs font-medium">Target</th>
+                      <th className="text-left py-1.5 text-xs font-medium">Scenario</th>
+                      <th className="text-right py-1.5 text-xs font-medium">Msgs</th>
+                      <th className="text-right py-1.5 text-xs font-medium">Tokens</th>
+                      <th className="text-right py-1.5 text-xs font-medium">Errors</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-300">
+                    {sessions.slice(0, 10).map((session) => (
+                      <tr key={session.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td className="py-1.5 text-xs">{session.target.name}</td>
+                        <td className="py-1.5 text-xs text-gray-400">{session.scenario?.name || "Custom"}</td>
+                        <td className="text-right text-xs">{session.summaryMetrics?.messageCount || 0}</td>
+                        <td className="text-right text-xs">{(session.summaryMetrics?.totalTokens || 0).toLocaleString()}</td>
+                        <td className="text-right text-xs">
+                          <span className={(session.summaryMetrics?.errorCount || 0) > 0 ? "text-red-400" : ""}>
+                            {session.summaryMetrics?.errorCount || 0}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="text-gray-300">
-                      {sessions.slice(0, 10).map((session) => (
-                        <tr key={session.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                          <td className="py-2 text-xs">{session.target.name}</td>
-                          <td className="py-2 text-xs text-gray-400">{session.scenario?.name || "Custom"}</td>
-                          <td className="text-right text-xs">{session.summaryMetrics?.messageCount || 0}</td>
-                          <td className="text-right text-xs">{(session.summaryMetrics?.totalTokens || 0).toLocaleString()}</td>
-                          <td className="text-right text-xs">
-                            <span className={(session.summaryMetrics?.errorCount || 0) > 0 ? "text-red-400" : ""}>
-                              {session.summaryMetrics?.errorCount || 0}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {sessions.length === 0 && (
-                    <div className="text-center text-gray-500 text-xs py-8">No sessions in range</div>
-                  )}
-                </div>
-              </CardContent>
+                    ))}
+                  </tbody>
+                </table>
+                {sessions.length === 0 && (
+                  <div className="text-center text-gray-500 text-xs py-6">No sessions in range</div>
+                )}
+              </div>
             </Card>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

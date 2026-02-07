@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProviderCard, MockChatbotCard } from "../shared/provider-card";
 import { JsonPreview } from "../shared/json-preview";
-import { StepNavigation } from "../shared/step-navigation";
 import { useWizard } from "../wizard-context";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -75,7 +74,7 @@ function presetToForm(preset: ProviderPreset): TargetForm {
 }
 
 export function StepTarget() {
-  const { selectedPresetId, setSelectedPresetId, setCreatedTargetId, createdTargetId, markComplete, currentStep, goNext } = useWizard();
+  const { selectedPresetId, setSelectedPresetId, setCreatedTargetId, createdTargetId, markComplete, currentStep, goNext, setNavProps } = useWizard();
   const { toast } = useToast();
   const [subStep, setSubStep] = useState<SubStep>(createdTargetId ? "review" : "choose");
   const [form, setForm] = useState<TargetForm>(() => {
@@ -137,13 +136,24 @@ export function StepTarget() {
     }
   };
 
+  // Set nav props based on substep and state
+  useEffect(() => {
+    if (createdTargetId && subStep === "review") {
+      setNavProps({ canProceed: true });
+    } else if (subStep === "choose") {
+      setNavProps({ canProceed: false });
+    } else {
+      setNavProps({ canProceed: false });
+    }
+  }, [createdTargetId, subStep, setNavProps]);
+
   // If target already created, show success
   if (createdTargetId && subStep === "review") {
     return (
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="text-center py-8">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 mb-4">
-            <Check className="h-7 w-7 text-emerald-400" />
+      <div className="max-w-xl mx-auto space-y-4">
+        <div className="text-center py-6">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 mb-3">
+            <Check className="h-6 w-6 text-emerald-400" />
           </div>
           <h2 className="text-lg font-semibold text-gray-100 mb-1">Target Created</h2>
           <p className="text-sm text-gray-500">ID: {createdTargetId}</p>
@@ -156,13 +166,12 @@ export function StepTarget() {
             Create Another
           </Button>
         </div>
-        <StepNavigation canProceed />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4">
       {/* Sub-step header */}
       <div>
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Create Target</h2>
@@ -375,7 +384,6 @@ export function StepTarget() {
         </div>
       )}
 
-      {subStep === "choose" && <StepNavigation canProceed={false} />}
     </div>
   );
 }

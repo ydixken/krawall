@@ -1,9 +1,9 @@
 "use client";
 
-import { Zap, Globe, Activity, BarChart3, Timer } from "lucide-react";
+import { useEffect } from "react";
+import { Zap, Globe, Activity, BarChart3 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useWizard } from "../wizard-context";
-import { StepNavigation } from "../shared/step-navigation";
 
 const FEATURES = [
   {
@@ -30,16 +30,27 @@ const FEATURES = [
 ];
 
 export function StepWelcome() {
-  const { markComplete, currentStep, goNext } = useWizard();
+  const { markComplete, currentStep, goNext, setNavProps } = useWizard();
+
+  useEffect(() => {
+    setNavProps({
+      canProceed: true,
+      nextLabel: "Let's Get Started",
+      onNext: () => {
+        markComplete(currentStep);
+        goNext();
+      },
+    });
+  }, [currentStep, markComplete, goNext, setNavProps]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-4">
       {/* Hero */}
-      <div className="text-center space-y-3">
-        <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-2">
-          <Zap className="h-7 w-7 text-blue-400" />
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-1">
+          <Zap className="h-5 w-5 text-blue-400" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-100">Welcome to Krawall</h1>
+        <h1 className="text-xl font-bold text-gray-100">Welcome to Krawall</h1>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
           An automated chatbot testing platform. Evaluate AI endpoints through structured scenarios,
           track token usage, and measure response quality.
@@ -79,21 +90,6 @@ export function StepWelcome() {
           ))}
         </div>
       </Card>
-
-      {/* Time estimate */}
-      <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-        <Timer className="h-3.5 w-3.5" />
-        <span>This guide takes about 5 minutes</span>
-      </div>
-
-      <StepNavigation
-        canProceed
-        nextLabel="Let's Get Started"
-        onNext={() => {
-          markComplete(currentStep);
-          goNext();
-        }}
-      />
     </div>
   );
 }

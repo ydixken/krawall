@@ -5,7 +5,6 @@ import { Database, HardDrive, Server, RefreshCw, Check, X, Loader2, Copy } from 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWizard } from "../wizard-context";
-import { StepNavigation } from "../shared/step-navigation";
 
 interface ServiceStatus {
   status: "unknown" | "checking" | "healthy" | "unhealthy";
@@ -26,7 +25,7 @@ const defaultHealth: HealthResult = {
 };
 
 export function StepInfrastructure() {
-  const { markComplete, currentStep, goNext } = useWizard();
+  const { markComplete, currentStep, goNext, setNavProps } = useWizard();
   const [health, setHealth] = useState<HealthResult>(defaultHealth);
   const [checking, setChecking] = useState(false);
 
@@ -80,6 +79,17 @@ export function StepInfrastructure() {
 
   const allHealthy = health.database.status === "healthy" && health.redis.status === "healthy";
 
+  useEffect(() => {
+    setNavProps({
+      canProceed: true,
+      showSkip: true,
+      onNext: () => {
+        markComplete(currentStep);
+        goNext();
+      },
+    });
+  }, [currentStep, markComplete, goNext, setNavProps]);
+
   const copyCommand = async (cmd: string) => {
     await navigator.clipboard.writeText(cmd);
   };
@@ -112,7 +122,7 @@ export function StepInfrastructure() {
   ];
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Infrastructure Check</h2>
         <p className="text-sm text-gray-500">
@@ -175,14 +185,6 @@ export function StepInfrastructure() {
         </div>
       )}
 
-      <StepNavigation
-        canProceed
-        showSkip
-        onNext={() => {
-          markComplete(currentStep);
-          goNext();
-        }}
-      />
     </div>
   );
 }

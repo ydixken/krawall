@@ -21,6 +21,13 @@ export interface WizardState {
   selectedTemplateId: string | null;
 }
 
+export interface NavProps {
+  canProceed?: boolean;
+  showSkip?: boolean;
+  nextLabel?: string;
+  onNext?: () => void;
+}
+
 interface WizardContextValue extends WizardState {
   totalSteps: number;
   goNext: () => void;
@@ -36,6 +43,8 @@ interface WizardContextValue extends WizardState {
   setSelectedPresetId: (id: string | null) => void;
   setSelectedTemplateId: (id: string | null) => void;
   resetWizard: () => void;
+  navProps: NavProps;
+  setNavProps: (props: NavProps) => void;
 }
 
 const WizardContext = createContext<WizardContextValue | null>(null);
@@ -83,6 +92,7 @@ function saveState(state: WizardState) {
 export function WizardProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WizardState>(defaultState);
   const [loaded, setLoaded] = useState(false);
+  const [navProps, setNavProps] = useState<NavProps>({ canProceed: true });
 
   useEffect(() => {
     const restored = loadState();
@@ -255,6 +265,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         setSelectedPresetId,
         setSelectedTemplateId,
         resetWizard,
+        navProps,
+        setNavProps,
       }}
     >
       {children}

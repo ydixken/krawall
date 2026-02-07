@@ -5,7 +5,6 @@ import { Rocket, AlertCircle, Crosshair, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MiniLogViewer } from "../shared/mini-log-viewer";
-import { StepNavigation } from "../shared/step-navigation";
 import { useWizard } from "../wizard-context";
 import { useToast } from "@/components/ui/toast";
 
@@ -18,6 +17,7 @@ export function StepExecute() {
     markComplete,
     currentStep,
     goNext,
+    setNavProps,
   } = useWizard();
   const { toast } = useToast();
   const [launching, setLaunching] = useState(false);
@@ -74,10 +74,26 @@ export function StepExecute() {
 
   const canLaunch = !!createdTargetId && !!createdScenarioId;
 
+  // Set nav props based on state
+  useEffect(() => {
+    if (createdSessionId) {
+      setNavProps({
+        canProceed: sessionComplete,
+        nextLabel: sessionComplete ? "View Results" : "Waiting...",
+        onNext: () => {
+          markComplete(currentStep);
+          goNext();
+        },
+      });
+    } else {
+      setNavProps({ canProceed: false });
+    }
+  }, [createdSessionId, sessionComplete, currentStep, markComplete, goNext, setNavProps]);
+
   // Already have a session - show log viewer
   if (createdSessionId) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-100 mb-1">Test Running</h2>
           <p className="text-sm text-gray-500">
@@ -92,21 +108,12 @@ export function StepExecute() {
             markComplete(currentStep);
           }}
         />
-
-        <StepNavigation
-          canProceed={sessionComplete}
-          nextLabel={sessionComplete ? "View Results" : "Waiting..."}
-          onNext={() => {
-            markComplete(currentStep);
-            goNext();
-          }}
-        />
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Execute Test</h2>
         <p className="text-sm text-gray-500">
@@ -181,7 +188,6 @@ export function StepExecute() {
         <p>Messages are logged in real-time and you can watch the conversation unfold.</p>
       </div>
 
-      <StepNavigation canProceed={false} />
     </div>
   );
 }

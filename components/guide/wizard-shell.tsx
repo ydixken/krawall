@@ -1,6 +1,7 @@
 "use client";
 
 import { useWizard } from "./wizard-context";
+import { StepNavigation } from "./shared/step-navigation";
 import {
   BookOpen,
   Server,
@@ -42,7 +43,7 @@ export function WizardShell({
   const progress = Math.round((completedSteps.length / STEPS.length) * 100);
 
   return (
-    <div className="flex gap-6 min-h-[calc(100vh-8rem)]">
+    <div className="flex gap-6 h-full">
       {/* Left rail - step progress */}
       <aside className="hidden lg:flex flex-col w-56 shrink-0">
         <div className="sticky top-6 space-y-1">
@@ -144,8 +145,14 @@ export function WizardShell({
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 min-w-0 lg:pt-0 pt-12">
-        <div className="animate-fadeIn">{children}</div>
+      <div className="flex-1 min-w-0 flex flex-col lg:pt-0 pt-12">
+        <div className="flex-1 min-h-0 overflow-y-auto animate-fadeIn">
+          {children}
+        </div>
+        {/* Fixed bottom navigation */}
+        <div className="shrink-0 border-t border-gray-800 pt-3 pb-1">
+          <StepNavigation />
+        </div>
       </div>
     </div>
   );

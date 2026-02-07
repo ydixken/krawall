@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SCENARIO_TEMPLATES, type ScenarioTemplate } from "@/lib/scenarios/templates";
 import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TemplateCard } from "../shared/template-card";
 import { JsonPreview } from "../shared/json-preview";
-import { StepNavigation } from "../shared/step-navigation";
 import { useWizard } from "../wizard-context";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -109,10 +108,12 @@ export function StepScenario() {
     markComplete,
     currentStep,
     goNext,
+    setNavProps,
   } = useWizard();
   const { toast } = useToast();
   const [subStep, setSubStep] = useState<SubStep>(createdScenarioId ? "review" : "choose");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [templatePage, setTemplatePage] = useState(0);
   const [form, setForm] = useState<ScenarioForm>(() => {
     if (selectedTemplateId === "quick-start") return templateToForm(QUICK_START);
     const tmpl = SCENARIO_TEMPLATES.find((t) => t.id === selectedTemplateId);
@@ -134,9 +135,31 @@ export function StepScenario() {
     if (tmpl) setForm(templateToForm(tmpl));
   };
 
+  const TEMPLATES_PER_PAGE = 4;
   const filteredTemplates = activeCategory === "All"
     ? SCENARIO_TEMPLATES
     : SCENARIO_TEMPLATES.filter((t) => t.category === activeCategory);
+  const totalPages = Math.ceil(filteredTemplates.length / TEMPLATES_PER_PAGE);
+  const paginatedTemplates = filteredTemplates.slice(
+    templatePage * TEMPLATES_PER_PAGE,
+    (templatePage + 1) * TEMPLATES_PER_PAGE
+  );
+
+  // Reset page when category changes
+  useEffect(() => {
+    setTemplatePage(0);
+  }, [activeCategory]);
+
+  // Set nav props based on substep
+  useEffect(() => {
+    if (createdScenarioId && subStep === "review") {
+      setNavProps({ canProceed: true });
+    } else if (subStep === "choose") {
+      setNavProps({ canProceed: false });
+    } else {
+      setNavProps({ canProceed: false });
+    }
+  }, [createdScenarioId, subStep, setNavProps]);
 
   const createScenario = async () => {
     setCreating(true);
@@ -193,10 +216,10 @@ export function StepScenario() {
   // If scenario already created
   if (createdScenarioId && subStep === "review") {
     return (
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="text-center py-8">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 mb-4">
-            <Check className="h-7 w-7 text-emerald-400" />
+      <div className="max-w-xl mx-auto space-y-4">
+        <div className="text-center py-6">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 mb-3">
+            <Check className="h-6 w-6 text-emerald-400" />
           </div>
           <h2 className="text-lg font-semibold text-gray-100 mb-1">Scenario Created</h2>
           <p className="text-sm text-gray-500">ID: {createdScenarioId}</p>
@@ -206,13 +229,12 @@ export function StepScenario() {
             Create Another
           </Button>
         </div>
-        <StepNavigation canProceed />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-gray-100 mb-1">Create Scenario</h2>
         <p className="text-sm text-gray-500">
@@ -268,9 +290,9 @@ export function StepScenario() {
             ))}
           </div>
 
-          {/* Template grid */}
+          {/* Template grid with pagination */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filteredTemplates.map((tmpl) => (
+            {paginatedTemplates.map((tmpl) => (
               <TemplateCard
                 key={tmpl.id}
                 template={tmpl}
@@ -279,6 +301,29 @@ export function StepScenario() {
               />
             ))}
           </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setTemplatePage((p) => Math.max(0, p - 1))}
+                disabled={templatePage === 0}
+                className="px-2 py-1 text-xs rounded text-gray-400 hover:text-gray-200 disabled:text-gray-700 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs text-gray-500">
+                {templatePage + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setTemplatePage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={templatePage >= totalPages - 1}
+                className="px-2 py-1 text-xs rounded text-gray-400 hover:text-gray-200 disabled:text-gray-700 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {/* Create from scratch */}
           <button
@@ -498,7 +543,6 @@ export function StepScenario() {
         </div>
       )}
 
-      {subStep === "choose" && <StepNavigation canProceed={false} />}
     </div>
   );
 }

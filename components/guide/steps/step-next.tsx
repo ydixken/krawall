@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Layers, GitCompare, Bell, Calendar, Code2, Puzzle, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,15 +54,19 @@ export function StepNext() {
     markComplete,
     currentStep,
     resetWizard,
+    setNavProps,
   } = useWizard();
 
-  // Mark complete on mount
-  markComplete(currentStep);
+  // Mark complete on mount and hide next button (last step)
+  useEffect(() => {
+    markComplete(currentStep);
+    setNavProps({ canProceed: false });
+  }, [currentStep, markComplete, setNavProps]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-4">
       {/* Celebration */}
-      <div className="text-center py-6 space-y-3">
+      <div className="text-center py-4 space-y-2">
         <div className="text-4xl mb-2">
           <span className="inline-block animate-bounce" style={{ animationDelay: "0ms" }}>&#x1F389;</span>
         </div>
