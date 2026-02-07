@@ -61,7 +61,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       messagePath: "messages.0.content",
       structure: {
         model: "gpt-4",
-        messages: [{ role: "user", content: "" }],
+        messages: [{ role: "user", content: "{{message}}" }],
         max_tokens: 1024,
       },
       variables: { model: "gpt-4" },
@@ -138,7 +138,7 @@ Check your organization's rate limits at the OpenAI dashboard.`,
       structure: {
         model: "claude-sonnet-4-5-20250929",
         max_tokens: 1024,
-        messages: [{ role: "user", content: "" }],
+        messages: [{ role: "user", content: "{{message}}" }],
       },
       variables: { model: "claude-sonnet-4-5-20250929" },
     },
@@ -208,7 +208,7 @@ Pass it via the \`x-api-key\` header. Also requires \`anthropic-version\` header
     requestTemplate: {
       messagePath: "contents.0.parts.0.text",
       structure: {
-        contents: [{ parts: [{ text: "" }] }],
+        contents: [{ parts: [{ text: "{{message}}" }] }],
       },
     },
     responseTemplate: {
@@ -283,7 +283,7 @@ Set the endpoint to include the model name, e.g.:
     requestTemplate: {
       messagePath: "messages.0.content",
       structure: {
-        messages: [{ role: "user", content: "" }],
+        messages: [{ role: "user", content: "{{message}}" }],
         max_tokens: 1024,
       },
     },
@@ -345,7 +345,7 @@ Same as OpenAI Chat Completions:
       messagePath: "messages.0.content",
       structure: {
         model: "llama3",
-        messages: [{ role: "user", content: "" }],
+        messages: [{ role: "user", content: "{{message}}" }],
         stream: false,
       },
       variables: { model: "llama3" },
@@ -412,7 +412,7 @@ Install models with \`ollama pull <model>\`:
     requestTemplate: {
       messagePath: "message",
       structure: {
-        message: "",
+        message: "{{message}}",
       },
     },
     responseTemplate: {
@@ -465,7 +465,7 @@ The \`errorPath\` (optional) extracts error messages from failed requests.`,
       messagePath: "message",
       structure: {
         type: "message",
-        message: "",
+        message: "{{message}}",
       },
     },
     responseTemplate: {
@@ -517,7 +517,7 @@ Messages are sent as JSON frames.
     requestTemplate: {
       messagePath: "message",
       structure: {
-        message: "",
+        message: "{{message}}",
         metadata: {},
       },
     },

@@ -33,14 +33,14 @@ const MOCK_PRESET: ProviderPreset = {
   authType: "NONE",
   authFields: [],
   requestTemplate: {
-    messagePath: "messages[-1].content",
+    messagePath: "messages.0.content",
     structure: {
       model: "gpt-4",
       messages: [{ role: "user", content: "{{message}}" }],
     },
   },
   responseTemplate: {
-    contentPath: "choices[0].message.content",
+    contentPath: "choices.0.message.content",
   },
   documentation: "",
   exampleResponse: {},
