@@ -2,7 +2,7 @@
 
 # Krawall
 
-**Stress-test conversational AI systems with realistic, high-volume conversation flows.**
+**Prove that your AI chatbot's API bill is an unguarded attack surface.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -11,9 +11,26 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Private-grey)]()
 
-Krawall is a full-stack chatbot testing platform for QA engineers, DevOps teams, and AI developers. Configure targets, build test scenarios, fire off sessions, and analyze results - all from a single dashboard.
+Krawall is a chatbot stress-testing platform that behaves like an overly engaged, perfectly valid user. No prompt injection. No jailbreaking. No auth bypass. Just very, very costly conversations.
 
 </div>
+
+---
+
+## Why Krawall?
+
+Companies are shipping AI chatbots - sometimes customer-facing - that are thin wrappers around commercial LLM APIs with zero cost controls. Most deployments share the same blind spots:
+
+- **No per-session token limits** - the chatbot will happily generate 10,000+ tokens per response if you ask nicely
+- **No meaningful rate limiting** - or if there is, it's trivially high
+- **No cost awareness** - the backend forwards everything to the API and someone pays whatever the bill says
+- **No conversation depth limits** - sessions grow indefinitely, accumulating context window costs
+
+This is the cloud billing equivalent of leaving your database exposed on the internet without a password. Except it's worse, because the "attacker" looks exactly like a legitimate user.
+
+Krawall exploits this by mimicking natural conversation flows that are perfectly valid but maximally expensive: repetitive prompts, requests for verbose structured output (hi, XML), "helpful clarifications" on every response, and multi-turn context accumulation. Every request is something a real customer might send. Nothing to see here.
+
+**The goal isn't to cause damage - it's to prove the attack vector is real, trivial to exploit, and that companies need to take API cost security as seriously as application security.**
 
 ---
 
