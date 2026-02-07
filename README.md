@@ -15,6 +15,10 @@ Krawall is a chatbot stress-testing platform that behaves like an overly engaged
 
 </div>
 
+<div align="center">
+  <img src="static/welcome.png" alt="Krawall Welcome Screen" width="800" />
+</div>
+
 ---
 
 ## Why Krawall?
@@ -79,6 +83,11 @@ Side-by-side statistical comparison of chatbot responses across different provid
 </tr>
 </table>
 
+<div align="center">
+  <img src="static/command-center.png" alt="Command Center Dashboard" width="800" />
+  <p><em>Real-time command center with live sessions, quick execute, and recent activity</em></p>
+</div>
+
 ---
 
 ## Features
@@ -90,12 +99,22 @@ Side-by-side statistical comparison of chatbot responses across different provid
 - **Inline Connection Testing** - Verify endpoints before committing to a configuration
 - **Centralized Settings** - Manage all application configuration from `/settings`
 
+<div align="center">
+  <img src="static/target.png" alt="Provider Presets" width="600" />
+  <p><em>One-click provider presets for OpenAI, Anthropic, Gemini, Azure, Ollama, and custom endpoints</em></p>
+</div>
+
 ### Scenario Management
 
 - **Visual Flow Builder** - Drag-and-drop editor with message, loop, delay, and conditional steps
 - **12 Pre-built Templates** - Stress tests, edge cases, context testing, rapid fire, branching logic, attack surface patterns
 - **Handlebars Templating** - Dynamic variable substitution with message index, timestamps, last response, and custom variables
 - **YAML Import/Export** - Version-control-friendly scenario format with bulk import
+
+<div align="center">
+  <img src="static/scenario-builder.png" alt="Visual Scenario Builder" width="800" />
+  <p><em>Visual flow builder with message, loop, delay, and conditional steps</em></p>
+</div>
 
 ### Execution Engine
 

@@ -6,7 +6,20 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Krawall",
-  description: "Stress-test conversational AI systems with realistic, high-volume conversation flows",
+  description: "Prove that your AI chatbot's API bill is an unguarded attack surface.",
+  icons: {
+    icon: "/favicon.svg",
+  },
+  openGraph: {
+    title: "Krawall",
+    description: "Prove that your AI chatbot's API bill is an unguarded attack surface.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Krawall",
+    description: "Prove that your AI chatbot's API bill is an unguarded attack surface.",
+  },
 };
 
 export default function RootLayout({
