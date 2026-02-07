@@ -1,398 +1,327 @@
-# Krawall: Chatbot Testing Platform
+<div align="center">
 
-A sophisticated platform for stress-testing conversational AI systems through realistic, high-volume conversation flows with repetitive, verbose prompts.
+# Krawall
+
+**Stress-test conversational AI systems with realistic, high-volume conversation flows.**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-Private-grey)]()
+
+Krawall is a full-stack chatbot testing platform for QA engineers, DevOps teams, and AI developers. Configure targets, build test scenarios, fire off sessions, and analyze results — all from a single dashboard.
+
+</div>
+
+---
+
+## Highlights
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### Multi-Protocol
+HTTP/REST, WebSocket, gRPC, and Server-Sent Events — test any chatbot endpoint regardless of protocol.
+
+</td>
+<td width="33%" valign="top">
+
+### 8 Provider Presets
+One-click setup for OpenAI, Anthropic, Google Gemini, Azure OpenAI, Ollama, and custom endpoints.
+
+</td>
+<td width="33%" valign="top">
+
+### 12 Scenario Templates
+Pre-built tests across 7 categories: Stress, Edge Case, Context, Performance, Logic, Krawall, and Attack Surface.
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+### Real-Time Metrics
+Response time, token usage, error rates, repetition detection, and quality scoring with P50/P95/P99 percentiles.
+
+</td>
+<td width="33%" valign="top">
+
+### Fire-and-Forget Execution
+Async session processing via BullMQ with concurrency control, rate limiting, and automatic retry.
+
+</td>
+<td width="33%" valign="top">
+
+### A/B Comparison
+Side-by-side statistical comparison of chatbot responses across different providers or configurations.
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Features
 
-- **Interactive Setup Wizard**: 8-step guided configurator with inline forms, provider presets, and live connection testing at `/guide`
-- **Provider Presets**: One-click setup for OpenAI, Anthropic, Google Gemini, Azure OpenAI, Ollama, custom HTTP/WebSocket/gRPC endpoints
-- **12 Scenario Templates**: Pre-built test scenarios across categories — Stress Test, Edge Case, Context, Performance, Logic, Krawall, and Attack Surface
-- **Multi-Protocol Support**: HTTP/REST, WebSockets, gRPC, Server-Sent Events
-- **Flexible Templating**: JSON-based request/response mapping with Zod validation
-- **Visual Scenario Builder**: Drag-and-drop flow editor with message, loop, delay, and conditional steps
-- **Fire-and-Forget Execution**: Async session processing via BullMQ with template variable substitution
-- **Conversation Context**: Stateful session memory with message history, conversation ID tracking, and context windowing
-- **Real-Time Metrics**: Response time, token usage, error rates, repetition detection, quality scoring
-- **A/B Comparison Testing**: Side-by-side comparison of chatbot responses with statistical analysis
-- **Multi-Target Batch Execution**: Run the same scenario against multiple targets in parallel
-- **Webhook Notifications**: HMAC-signed webhook delivery for session events with retry logic
-- **Rate Limit Simulation**: Token bucket algorithm with automatic 429 backoff handling
-- **Session Replay**: Step-through playback with anomaly highlighting and per-message metrics
-- **YAML Import/Export**: Version-control-friendly scenario format with bulk import
-- **Live Dashboard**: Real-time stats, quick execution, auto-refreshing widgets
-- **Settings & Configuration**: Centralized settings management at `/settings`
-- **API Documentation**: Built-in Swagger/OpenAPI explorer at `/api-docs`
-- **Mock Chatbot Server**: Built-in OpenAI-compatible mock for testing without API keys
-- **Inline Connection Testing**: Verify endpoints directly in the setup wizard or target management
-- **Worker Auto-Start**: BullMQ workers start automatically via Next.js `instrumentation.ts` hook
-- **File-Based Logging**: High-performance JSONL logging for session data
+### Setup & Configuration
 
-## Tech Stack
+- **Interactive Setup Wizard** — 8-step guided configurator with inline connection testing and live session monitoring
+- **Provider Presets** — Pre-configured templates for OpenAI, Anthropic, Gemini, Azure, Ollama, custom HTTP/WS/gRPC
+- **Inline Connection Testing** — Verify endpoints before committing to a configuration
+- **Centralized Settings** — Manage all application configuration from `/settings`
 
-- **Frontend**: Next.js 16.1.6 (App Router), TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: PostgreSQL 16
-- **Cache/Queue**: Redis 7, BullMQ
-- **Testing**: Vitest, Mock Chatbot Server
-- **DevOps**: Docker, Docker Compose, Taskfile
+### Scenario Management
 
-## Project Structure
+- **Visual Flow Builder** — Drag-and-drop editor with message, loop, delay, and conditional steps
+- **12 Pre-built Templates** — Stress tests, edge cases, context testing, rapid fire, branching logic, attack surface patterns
+- **Handlebars Templating** — Dynamic variable substitution with message index, timestamps, last response, and custom variables
+- **YAML Import/Export** — Version-control-friendly scenario format with bulk import
 
-```
-krawall/
-├── app/                        # Next.js 16.1.6 App Router
-│   ├── (dashboard)/            # Dashboard routes (route group)
-│   │   ├── page.tsx            # / — Live dashboard with widgets
-│   │   ├── guide/              # /guide — Interactive setup wizard
-│   │   ├── targets/            # /targets — Target management
-│   │   ├── scenarios/          # /scenarios — Scenario CRUD + flow builder
-│   │   ├── sessions/           # /sessions — Session list + detail + replay
-│   │   ├── batches/            # /batches — Multi-target batch execution
-│   │   ├── compare/            # /compare — A/B comparison views
-│   │   ├── metrics/            # /metrics — Charts and analytics
-│   │   ├── settings/           # /settings — Configuration + webhooks
-│   │   └── api-docs/           # /api-docs — Swagger/OpenAPI explorer
-│   ├── api/                    # API Routes
-│   │   ├── targets/            # CRUD + connection testing
-│   │   ├── scenarios/          # CRUD + YAML import/export
-│   │   ├── sessions/           # Sessions + SSE streaming
-│   │   ├── execute/            # Fire-and-forget + batch execution
-│   │   ├── compare/            # A/B comparison API
-│   │   ├── webhooks/           # Webhook CRUD + test + deliveries
-│   │   ├── metrics/            # Query + export + quality scores
-│   │   ├── queue/              # Queue status + worker health
-│   │   ├── guide/              # Wizard target creation
-│   │   └── dashboard/          # Aggregated stats
-│   └── globals.css
-├── components/                 # React components
-│   ├── guide/                  # Guided setup wizard
-│   │   ├── steps/              # 8 wizard steps
-│   │   └── shared/             # Reusable guide components
-│   ├── ui/                     # Design system (19 components)
-│   ├── sessions/               # LogViewer, SessionReplay
-│   ├── scenarios/              # FlowBuilder, YamlImportExport
-│   ├── targets/                # TestConnectionButton
-│   ├── batches/                # BatchExecuteForm
-│   ├── webhooks/               # WebhookForm
-│   └── jobs/                   # ActiveJobs
-├── lib/                        # Core library
-│   ├── connectors/             # HTTP, WebSocket, gRPC, SSE
-│   │   └── presets.ts          # 8 provider presets
-│   ├── scenarios/
-│   │   └── templates.ts        # 12 scenario templates
-│   ├── context/                # Conversation context / memory
-│   ├── jobs/                   # BullMQ workers + scheduler
-│   ├── metrics/                # MetricsCollector + QualityScorer
-│   ├── webhooks/               # Signer + delivery worker + emitter
-│   ├── rate-limit/             # Token bucket rate limiter
-│   ├── logging/                # JSONL session logger
-│   └── utils/                  # Encryption, helpers
-├── prisma/                     # Database schema + migrations
-├── tests/                      # Test suites (70+ tests)
-│   ├── unit/                   # Connector, webhook, quality tests
-│   ├── integration/            # API route + E2E tests
-│   └── mocks/                  # Mock chatbot server
-├── infra/                      # Docker Compose (dev + prod)
-├── docs/                       # API reference + deployment guide
-├── instrumentation.ts          # Worker auto-start (Next.js hook)
-└── Taskfile.yml                # Task automation
-```
+### Execution Engine
+
+- **Async Job Queue** — BullMQ-powered fire-and-forget execution with configurable worker concurrency
+- **Conversation Context** — Stateful session memory with message history, conversation ID tracking, and context windowing
+- **Concurrency Control** — Semaphore-based limiting (1–100 parallel sessions)
+- **Rate Limiting** — Token bucket algorithm with automatic 429 detection and exponential backoff
+- **Configurable Error Handling** — Per-scenario retry policies, timeouts, and error injection for resilience testing
+- **Session Actions** — Restart, cancel, or delete sessions mid-flight
+
+### Monitoring & Analytics
+
+- **Live Dashboard** — Auto-refreshing widgets for active sessions, completion rate, response time, error rate, and token usage
+- **Chart Visualizations** — Response time (line/bar), token distribution (doughnut), error rate trends via Chart.js
+- **Session Replay** — Step-through playback with timeline, anomaly highlighting, and per-message metrics
+- **Quality Scoring** — Automated relevance, coherence, and completeness assessment
+- **Data Export** — CSV and JSON export for metrics and aggregated results
+
+### Integrations & Automation
+
+- **Webhook Notifications** — HMAC-SHA256 signed delivery for `session.completed` and `session.failed` events with retry
+- **Batch Execution** — Run the same scenario against multiple targets in parallel with aggregated results
+- **Cron Scheduling** — Standard cron expressions with timezone support for recurring test runs
+- **Plugin System** — Extensible architecture with Multi-Step Auth, OpenAI, Anthropic, and Audit plugins
+
+### Developer Experience
+
+- **API Documentation** — Built-in Swagger/OpenAPI explorer at `/api-docs`
+- **Mock Chatbot Server** — OpenAI-compatible mock with 5 personas (verbose, XML, ecommerce, support, repetitive)
+- **Command Palette** — `Cmd+K` keyboard shortcuts for power users
+- **Worker Auto-Start** — BullMQ workers launch automatically via Next.js `instrumentation.ts` — no separate process
+- **File-Based Logging** — High-performance JSONL format for session data without database bloat
+- **40+ Task Commands** — Comprehensive Taskfile for dev, test, build, database, and Docker operations
+
+---
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js >= 20.0.0
-- pnpm >= 8.0.0
-- Docker Desktop (for PostgreSQL & Redis)
+- Node.js >= 20 &nbsp;|&nbsp; pnpm >= 8 &nbsp;|&nbsp; Docker Desktop
 
-### Installation
+### Setup
 
-1. **Clone and install dependencies**:
-   ```bash
-   pnpm install
-   ```
+```bash
+# 1. Install dependencies
+pnpm install
 
-2. **Start infrastructure services**:
-   ```bash
-   pnpm install -g @go-task/task
-   task docker:up
-   ```
+# 2. Start PostgreSQL & Redis
+pnpm install -g @go-task/task
+task docker:up
 
-3. **Setup database**:
-   ```bash
-   task db:generate
-   task db:push
-   task db:seed
-   ```
+# 3. Initialize database
+task db:generate && task db:push && task db:seed
 
-4. **Start development server with workers**:
-   ```bash
-   task dev:full
-   ```
-   Workers start automatically via `instrumentation.ts` — no separate worker process needed.
+# 4. Start dev server (includes workers)
+task dev:full
+```
 
-5. **Visit the app**:
-   - Dashboard: http://localhost:3000
-   - **Guided Setup**: http://localhost:3000/guide — interactive wizard for first-time configuration
-   - API Docs: http://localhost:3000/api-docs
-   - Health Check: http://localhost:3000/api/health
-   - Redis Commander: http://localhost:8081
-
-### All-in-One Setup
+Or run everything at once:
 
 ```bash
 task setup
 ```
 
-## Available Commands
+### Access
 
-See all available commands:
-```bash
-task
+| URL | Description |
+|-----|-------------|
+| [localhost:3000](http://localhost:3000) | Dashboard |
+| [localhost:3000/guide](http://localhost:3000/guide) | Interactive setup wizard |
+| [localhost:3000/api-docs](http://localhost:3000/api-docs) | Swagger API explorer |
+| [localhost:3000/api/health](http://localhost:3000/api/health) | Health check |
+| [localhost:8081](http://localhost:8081) | Redis Commander |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16.1 (App Router), TypeScript, Tailwind CSS, Chart.js |
+| Backend | Next.js API Routes, Prisma ORM, BullMQ, Zod |
+| Database | PostgreSQL 16 |
+| Cache & Queue | Redis 7, BullMQ |
+| Protocols | HTTP/REST (axios), WebSocket (ws), gRPC (grpc-js), SSE (eventsource) |
+| Testing | Vitest, Testing Library, Mock Chatbot Server |
+| DevOps | Docker Compose, GitLab CI/CD, Taskfile, Nginx |
+
+---
+
+## Architecture
+
+Krawall follows a **Next.js App Router** architecture with background workers for async job processing. The frontend renders a rich dashboard UI while API routes handle CRUD operations and fire-and-forget execution. BullMQ workers pick up jobs from Redis and execute test scenarios through the connector abstraction layer.
+
+### Connector System
+
+All chatbot protocols extend a `BaseConnector` abstract class with a registry pattern for dynamic protocol resolution:
+
+| Protocol | Connector | Features |
+|----------|-----------|----------|
+| HTTP/REST | `HTTPConnector` | Request/response templating, auth injection |
+| WebSocket | `WebSocketConnector` | Bidirectional messaging, auto-reconnect |
+| gRPC | `GRPCConnector` | Proto loading, TLS support |
+| SSE | `SSEConnector` | Streaming response handling |
+
+### Provider Presets
+
+| Preset | Provider | Auth |
+|--------|----------|------|
+| `openai-chat` | OpenAI Chat Completions | Bearer Token |
+| `anthropic-messages` | Anthropic Messages API | Custom Header |
+| `google-gemini` | Google Gemini | API Key |
+| `azure-openai` | Azure OpenAI | API Key |
+| `ollama` | Ollama (local) | None |
+| `custom-http` | Custom HTTP | Configurable |
+| `custom-websocket` | Custom WebSocket | Configurable |
+| `custom-grpc` | Custom gRPC | Configurable |
+
+### Worker Pipeline
+
+1. **Session Execution** — Execute test scenarios with connector lifecycle management
+2. **Metrics Aggregation** — Compute P50/P95/P99 percentiles from raw session data
+3. **Webhook Delivery** — HMAC-signed event delivery with exponential backoff retry
+
+Workers start automatically via `instrumentation.ts` and shut down gracefully on `SIGTERM`/`SIGINT`.
+
+<details>
+<summary><strong>Project Structure</strong></summary>
+
+```
+krawall/
+├── app/                        # Next.js App Router
+│   ├── (dashboard)/            # UI routes (dashboard, guide, targets, scenarios, sessions, etc.)
+│   ├── api/                    # 20+ API route handlers
+│   └── globals.css
+├── components/                 # 47 React components
+│   ├── ui/                     # 19 design system primitives
+│   ├── guide/                  # Setup wizard (8 steps)
+│   ├── sessions/               # LogViewer, SessionReplay
+│   ├── scenarios/              # FlowBuilder, YamlImportExport
+│   └── ...                     # targets, batches, webhooks, jobs, metrics
+├── lib/                        # Core business logic
+│   ├── connectors/             # HTTP, WebSocket, gRPC, SSE + registry + presets + plugins
+│   ├── jobs/                   # BullMQ queue, workers, scheduler
+│   ├── metrics/                # MetricsCollector, QualityScorer
+│   ├── webhooks/               # Signer, emitter, delivery
+│   ├── context/                # ConversationContext (stateful memory)
+│   ├── rate-limit/             # Token bucket algorithm
+│   └── utils/                  # Encryption (AES-256-GCM), helpers
+├── prisma/                     # Schema, migrations, seed
+├── tests/                      # 70+ tests (unit + integration)
+├── infra/                      # Docker Compose (dev + prod)
+├── docs/                       # API.md, DEPLOYMENT.md, MOCK_CHATBOT.md
+└── instrumentation.ts          # Worker auto-start hook
 ```
 
-### Development
+</details>
+
+---
+
+## Commands
+
+<details>
+<summary><strong>Development</strong></summary>
+
 ```bash
 task dev              # Start development server
-task dev:full         # Start dev with workers (recommended)
-task build            # Build for production
+task dev:full         # Start dev + workers (recommended)
+task build            # Production build
 task type-check       # TypeScript checking
-task lint             # Run ESLint
-task format           # Format with Prettier
+task lint             # ESLint
+task format           # Prettier formatting
 ```
 
-### Workers & Queue
-```bash
-task worker:status    # Check queue and worker health
-```
+</details>
 
-### Database
+<details>
+<summary><strong>Database</strong></summary>
+
 ```bash
 task db:generate      # Generate Prisma client
 task db:push          # Push schema changes
 task db:migrate:dev   # Create migration
-task db:seed          # Seed database
+task db:seed          # Seed sample data
 task db:studio        # Open Prisma Studio
 ```
 
-### Docker
+</details>
+
+<details>
+<summary><strong>Docker</strong></summary>
+
 ```bash
-task docker:up        # Start services
+task docker:up        # Start PostgreSQL + Redis
 task docker:down      # Stop services
 task docker:logs      # View logs
 task docker:clean     # Remove volumes
 ```
 
-### Testing
+</details>
+
+<details>
+<summary><strong>Testing</strong></summary>
+
 ```bash
 task test             # Run tests
 task test:watch       # Watch mode
-task test:coverage    # With coverage
+task test:coverage    # With coverage report
+task worker:status    # Check queue health
 ```
 
-## Architecture
-
-### Connector System
-
-All chatbot protocols extend the `BaseConnector` abstract class:
-
-```typescript
-import { BaseConnector, ConnectorConfig } from "@/lib/connectors/base";
-
-class MyConnector extends BaseConnector {
-  async connect(): Promise<void> { /* ... */ }
-  async sendMessage(message: string): Promise<ConnectorResponse> { /* ... */ }
-  // ... other methods
-}
-```
-
-### Provider Preset System
-
-Extensible provider presets in `lib/connectors/presets.ts` allow one-click target configuration for popular LLM providers:
-
-| Preset | Provider | Protocol | Auth |
-|--------|----------|----------|------|
-| `openai-chat` | OpenAI Chat Completions | HTTP/REST | Bearer Token |
-| `anthropic-messages` | Anthropic Messages API | HTTP/REST | Custom Header |
-| `google-gemini` | Google Gemini | HTTP/REST | API Key |
-| `azure-openai` | Azure OpenAI | HTTP/REST | API Key |
-| `ollama` | Ollama (local) | HTTP/REST | None |
-| `custom-http` | Custom HTTP | HTTP/REST | Configurable |
-| `custom-websocket` | Custom WebSocket | WebSocket | Configurable |
-| `custom-grpc` | Custom gRPC | gRPC | Configurable |
-
-Each preset includes endpoint defaults, auth field definitions, request/response templates, and inline documentation.
-
-### Scenario Template System
-
-12 pre-built templates in `lib/scenarios/templates.ts` across 7 categories:
-
-| Category | Templates | Purpose |
-|----------|-----------|---------|
-| Stress Test | Basic, XML Format | High-volume repetitive prompts |
-| Edge Case | Empty Input, Unicode | Boundary condition testing |
-| Context | Conversation Context | Multi-turn memory testing |
-| Performance | Rapid Fire | Throughput benchmarking |
-| Logic | Branching Conversation | Conditional flow testing |
-| Krawall | Long-Form Output | Token consumption analysis |
-| Attack Surface | E-Commerce Drain, Support Flood, Context Stuffer, Polite Requester | Security and abuse pattern testing |
-
-### Worker Lifecycle
-
-BullMQ workers are managed automatically through Next.js instrumentation:
-
-1. **Auto-start**: `instrumentation.ts` launches workers when the Next.js server starts (Node.js runtime only)
-2. **Workers**: `session-execution` (run test scenarios), `metrics-aggregation` (compute P50/P95/P99 percentiles)
-3. **Graceful shutdown**: Workers close cleanly on `SIGTERM`/`SIGINT`
-4. **Health monitoring**: Queue status available via `GET /api/queue/status` or `task worker:status`
-
-### Database Schema
-
-Key models:
-- **Target**: Chatbot endpoint configuration (auth, templates, rate limits)
-- **Scenario**: Test scenario definition (flow config, execution settings)
-- **Session**: Test execution instance (status, metrics, log path)
-- **SessionMetric**: Per-message metrics
-- **ScheduledJob**: Cron scheduling
-- **Comparison**: A/B test results between two sessions
-- **Webhook**: Event notification configuration
-- **WebhookDelivery**: Delivery log with retry tracking
-
-### Job Queue
-
-BullMQ workers for background processing:
-- `session-execution`: Execute test scenarios with connector lifecycle management
-- `metrics-aggregation`: Aggregate and analyze metrics (P50, P95, P99)
-- `webhook-delivery`: Signed webhook delivery with exponential backoff retry
-
-## Testing
-
-### Run Unit Tests
-
-```bash
-pnpm test
-```
-
-### Test with Mock Chatbot
-
-The included mock chatbot server simulates various behaviors:
-- Verbose responses
-- XML format outputs
-- Repetitive answers
-- Error scenarios (5% random errors)
-- Variable response times (100-2000ms)
-
-## Implementation Status
-
-### Phase 1: Foundation ✓
-- Next.js 16.1.6 with TypeScript & Tailwind CSS
-- Prisma schema with PostgreSQL
-- Redis & BullMQ configuration
-- BaseConnector abstract class + HTTPConnector
-- Docker Compose stack, Taskfile, API health check
-- Mock chatbot server + unit tests
-
-### Phase 2: Core Features ✓
-- Target CRUD API and UI
-- Scenario management system + flow builder
-- Session executor worker
-- Fire-and-forget execution + file-based logging (JSONL)
-
-### Phase 3: Additional Connectors ✓
-- WebSocket connector (bidirectional, auto-reconnect)
-- gRPC connector (proto loading, TLS support)
-- SSE connector (streaming support)
-- Connector registry with auto-registration
-
-### Phase 4: Metrics & Visualization ✓
-- MetricsCollector with Levenshtein distance algorithm
-- Metrics aggregation worker (P50, P95, P99)
-- Chart.js visualizations (Line, Bar, Doughnut) + CSV/JSON export
-
-### Phase 5: Advanced Features ✓
-- SSE endpoint for live log streaming + LogViewer
-- 8 pre-built scenario templates + cron-based scheduling
-- ActiveJobs monitoring + session detail pages
-
-### Phase 6: DevOps & Documentation ✓
-- GitLab CI/CD pipeline + production Docker Compose
-- Nginx reverse proxy config
-- Complete API documentation + AGENTS.md
-
-### Phase 7: Build Fixes & Stability ✓
-- Next.js 16 async params migration
-- Prisma type alignment, gRPC interface compliance
-- 70+ tests passing with deterministic mocks
-
-### Phase 8: Session Engine & Context ✓
-- Enhanced flow engine (all step types, Handlebars templating)
-- Connector lifecycle with auto-reconnect (exponential backoff)
-- Concurrency via semaphore-based limiting
-- ConversationContext class with message history and windowing
-
-### Phase 9: Target Testing & Dashboard ✓
-- Target connection test endpoint (dry run)
-- Dashboard stats API + live dashboard with auto-refreshing widgets
-- Quick Execute widget + scenario flow builder (drag-and-drop)
-
-### Phase 10: Comparison & Quality ✓
-- A/B testing API + side-by-side comparison UI
-- Response quality scoring (relevance, coherence, completeness)
-- YAML import/export + rate limit simulation (token bucket)
-
-### Phase 11: Webhooks & Notifications ✓
-- Webhook model with HMAC-SHA256 signing
-- BullMQ delivery worker with exponential backoff
-- Event emission (session.completed, session.failed)
-
-### Phase 12: Batch Execution & Replay ✓
-- Multi-target batch execution API + progress tracking UI
-- Session replay with playback controls, timeline, anomaly highlighting
-- 48 API route integration tests
-
-### Sprint 1: Design System & UI Components ✓
-- 19 reusable UI components (Button, Card, Badge, Input, Modal, Tabs, Dropdown, Breadcrumb, DataTable, etc.)
-- Collapsible sidebar navigation
-- Command palette (Cmd+K) with keyboard shortcuts
-- Toast notification system
-
-### Sprint 2: Chat Backend Templating & Plugin System ✓
-- Backend templating engine with plugin architecture
-- Chat-based interaction patterns
-
-### Sprint 3: Major Feature & Polish Sprint ✓
-- Comprehensive feature polish and UX improvements
-- Performance optimizations across the platform
-
-### Sprint 4: Guided Setup Wizard ✓
-- 8-step interactive wizard at `/guide`
-- Provider presets for OpenAI, Anthropic, Gemini, Azure, Ollama + custom endpoints
-- 12 scenario templates across 7 categories
-- Inline connection testing with live results
-- Live session monitoring during wizard execution
-
-### Sprint 5: Worker Lifecycle & Diagnostics ✓
-- Auto-start workers via `instrumentation.ts` (Next.js hook)
-- Queue status API (`GET /api/queue/status`)
-- Session diagnostics and worker health monitoring
-
-## Security
-
-- Credential encryption (AES-256-GCM)
-- Input validation (Zod)
-- Rate limiting
-- Security headers
-- SQL injection prevention (Prisma)
-
-## License
-
-Private project - All rights reserved
-
-## Contributing
-
-This project follows autonomous development with comprehensive testing at each stage.
+</details>
 
 ---
 
-Built with Next.js 16.1.6, TypeScript, and Tailwind CSS
+## Security
+
+- **Credential Encryption** — AES-256-GCM at rest for all stored secrets
+- **Input Validation** — Zod schemas on every API endpoint
+- **SQL Injection Prevention** — Prisma parameterized queries
+- **Webhook Signing** — HMAC-SHA256 payload verification
+- **Rate Limiting** — Token bucket per target
+- **Security Headers** — Configured via Next.js middleware
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [API Reference](docs/API.md) | Complete REST API documentation |
+| [Deployment Guide](docs/DEPLOYMENT.md) | Production deployment with Docker & Nginx |
+| [Mock Chatbot](docs/MOCK_CHATBOT.md) | Mock server configuration and personas |
+| [Scenario Templates](docs/templates.md) | Pre-built template documentation |
+| [Configuration](CONFIGURATION.md) | Environment variables and infrastructure options |
+| [Installation](INSTALL.md) | Step-by-step setup guide |
+| [Changelog](docs/CHANGELOG.md) | Implementation history and milestones |
+
+---
+
+<div align="center">
+
+Built with Next.js, TypeScript, and Tailwind CSS
+
+</div>
