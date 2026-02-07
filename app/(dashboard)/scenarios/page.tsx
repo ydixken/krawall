@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { ExportYamlButton, YamlImportModal } from "@/components/scenarios/YamlImportExport";
 
 interface Scenario {
   id: string;
@@ -17,6 +18,7 @@ interface Scenario {
 export default function ScenariosPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     fetchScenarios();
@@ -45,12 +47,20 @@ export default function ScenariosPage() {
           <p className="text-gray-400 mt-1">Manage your chatbot test scenarios</p>
         </div>
 
-        <Link
-          href="/scenarios/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Create Scenario
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+          >
+            Import YAML
+          </button>
+          <Link
+            href="/scenarios/new"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Create Scenario
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -61,12 +71,20 @@ export default function ScenariosPage() {
         <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
           <h3 className="text-xl font-semibold text-gray-300 mb-2">No scenarios yet</h3>
           <p className="text-gray-400 mb-6">Create your first test scenario to get started</p>
-          <Link
-            href="/scenarios/new"
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Create Your First Scenario
-          </Link>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              href="/scenarios/new"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Your First Scenario
+            </Link>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="inline-block px-6 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Import from YAML
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -96,9 +114,9 @@ export default function ScenariosPage() {
                 </div>
               )}
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-4 items-center">
                 <Link
-                  href={`/scenarios/${scenario.id}`}
+                  href={`/scenarios/${scenario.id}/edit`}
                   className="flex-1 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-center text-sm"
                 >
                   Edit
@@ -108,11 +126,18 @@ export default function ScenariosPage() {
                 >
                   Execute
                 </button>
+                <ExportYamlButton scenarioId={scenario.id} scenarioName={scenario.name} />
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <YamlImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={fetchScenarios}
+      />
     </div>
   );
 }

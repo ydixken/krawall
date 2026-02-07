@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TestConnectionButton from "@/components/targets/TestConnectionButton";
 
 interface Target {
   id: string;
@@ -159,25 +160,28 @@ export default function TargetsPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4 border-t border-gray-700">
-                <Link
-                  href={`/targets/${target.id}`}
-                  className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm text-center transition"
-                >
-                  View
-                </Link>
-                <Link
-                  href={`/targets/${target.id}/edit`}
-                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm text-center transition"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleDelete(target.id)}
-                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition"
-                >
-                  Delete
-                </button>
+              <div className="pt-4 border-t border-gray-700 space-y-3">
+                <TestConnectionButton targetId={target.id} targetName={target.name} />
+                <div className="flex gap-2">
+                  <Link
+                    href={`/targets/${target.id}`}
+                    className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm text-center transition"
+                  >
+                    View
+                  </Link>
+                  <Link
+                    href={`/targets/${target.id}/edit`}
+                    className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm text-center transition"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(target.id)}
+                    className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
