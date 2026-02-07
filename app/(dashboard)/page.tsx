@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Zap,
   BookOpen,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -482,6 +483,35 @@ export default function DashboardPage() {
         }
       />
 
+      {/* Guide CTA - prominent hero when fresh install */}
+      {!loading &&
+        stats.totalTargets === 0 &&
+        stats.totalScenarios === 0 && (
+          <Link href="/guide" className="block">
+            <div className="rounded-xl border border-blue-800/50 bg-gradient-to-br from-blue-950/50 via-indigo-950/40 to-purple-950/30 p-8 mb-6 hover:border-blue-700/60 transition-colors group">
+              <div className="flex items-center gap-6">
+                <div className="rounded-2xl bg-blue-500/15 p-5 group-hover:bg-blue-500/20 transition-colors">
+                  <BookOpen className="h-10 w-10 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    New here? Start the Guided Setup
+                  </h2>
+                  <p className="text-base text-gray-400 mb-3">
+                    Set up your first chatbot target, create a test scenario, and run your first
+                    stress test — all in about 5 minutes.
+                  </p>
+                  <span className="inline-flex items-center gap-2 text-sm font-medium text-blue-400 group-hover:text-blue-300 transition-colors">
+                    <BookOpen className="h-4 w-4" />
+                    Launch Guide
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ============================================================= */}
@@ -879,40 +909,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Guide CTA - only when truly empty */}
-      {!loading &&
-        stats.totalTargets === 0 &&
-        stats.totalScenarios === 0 && (
-          <Card
-            variant="bordered"
-            className="mt-4 border-blue-900/40 bg-gradient-to-r from-blue-950/30 to-purple-950/20"
-          >
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="rounded-full bg-blue-900/30 p-3">
-                    <BookOpen className="h-5 w-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-blue-300 mb-1">
-                      New here? Start the Guided Setup
-                    </h3>
-                    <p className="text-xs text-gray-400 mb-0">
-                      Set up your first chatbot target, create a test scenario,
-                      and run your first test - all in about 5 minutes.
-                    </p>
-                  </div>
-                </div>
-                <Link href="/guide">
-                  <Button size="sm">
-                    <BookOpen className="h-3.5 w-3.5 mr-1.5" />
-                    Start Guide
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
       {/* Continue Guide link - when user has data but guide is incomplete */}
       {!loading &&
