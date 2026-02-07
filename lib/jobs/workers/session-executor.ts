@@ -241,6 +241,12 @@ export function createSessionWorker() {
           executionConfig: executionConfig as any,
         });
 
+        // Set logPath early so the messages API can stream messages during execution
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: { logPath: logger.getPath() },
+        });
+
         // Initialize execution context with conversation memory
         const conversation = new ConversationContext({
           maxContextTokens: (executionConfig as any).maxContextTokens ?? 4096,
