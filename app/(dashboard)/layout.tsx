@@ -33,10 +33,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Sessions
           </a>
           <a
+            href="/batches"
+            className="block px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            Batches
+          </a>
+          <a
+            href="/compare"
+            className="block px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            Compare
+          </a>
+          <a
             href="/metrics"
             className="block px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white"
           >
             Metrics
+          </a>
+          <div className="mt-4 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Settings
+          </div>
+          <a
+            href="/settings/webhooks"
+            className="block px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            Webhooks
           </a>
         </nav>
       </aside>

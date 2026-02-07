@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import LogViewer from "@/components/sessions/LogViewer";
+import SessionReplay from "@/components/sessions/SessionReplay";
 
 interface Session {
   id: string;
@@ -26,6 +27,7 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"live" | "replay">("live");
 
   useEffect(() => {
     fetchSession();
@@ -175,8 +177,36 @@ export default function SessionDetailPage() {
         </div>
       )}
 
-      {/* Live Log Viewer */}
-      <LogViewer sessionId={sessionId} />
+      {/* View Mode Toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setViewMode("live")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            viewMode === "live"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+          }`}
+        >
+          Live Log
+        </button>
+        <button
+          onClick={() => setViewMode("replay")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            viewMode === "replay"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+          }`}
+        >
+          Replay
+        </button>
+      </div>
+
+      {/* Content based on view mode */}
+      {viewMode === "live" ? (
+        <LogViewer sessionId={sessionId} />
+      ) : (
+        <SessionReplay sessionId={sessionId} />
+      )}
     </div>
   );
 }
