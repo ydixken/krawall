@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Zap,
   Search,
+  Github,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/ui/command-palette";
@@ -110,8 +111,8 @@ export default function DashboardLayout({
         }`}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center border-b border-gray-800 px-3">
-          <a href="/" className="flex items-center gap-2.5 min-w-0">
+        <div className={`flex h-14 items-center border-b border-gray-800 ${collapsed ? "justify-center px-0" : "px-3"}`}>
+          <a href="/" className={`flex items-center gap-2.5 min-w-0 ${collapsed ? "justify-center" : ""}`}>
             <Zap className="h-5 w-5 text-blue-500 shrink-0" />
             {!collapsed && (
               <span className="text-sm font-semibold text-gray-100 truncate">
@@ -137,7 +138,9 @@ export default function DashboardLayout({
                   <a
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors relative ${
+                    className={`flex items-center gap-2.5 rounded-md py-1.5 text-sm transition-colors relative ${
+                      collapsed ? "justify-center px-0" : "px-2"
+                    } ${
                       active
                         ? "bg-blue-500/10 text-blue-400"
                         : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
@@ -165,7 +168,33 @@ export default function DashboardLayout({
           ))}
         </nav>
 
-        {/* Bottom */}
+        {/* GitHub link */}
+        <div className="px-1.5 pb-1">
+          {collapsed ? (
+            <Tooltip content="GitHub">
+              <a
+                href="https://github.com/ydixken/krawall"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center rounded-md p-1.5 text-gray-500 hover:bg-gray-800 hover:text-gray-300 transition-colors"
+              >
+                <Github className="h-4 w-4" />
+              </a>
+            </Tooltip>
+          ) : (
+            <a
+              href="https://github.com/ydixken/krawall"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-800 hover:text-gray-300 transition-colors"
+            >
+              <Github className="h-4 w-4 shrink-0" />
+              <span className="truncate">GitHub</span>
+            </a>
+          )}
+        </div>
+
+        {/* Collapse toggle */}
         <div className="border-t border-gray-800 p-1.5">
           <button
             onClick={() => setCollapsed(!collapsed)}
