@@ -111,8 +111,8 @@ export default function DashboardLayout({
         }`}
       >
         {/* Logo */}
-        <div className={`flex h-14 items-center border-b border-gray-800 ${collapsed ? "justify-center px-0" : "px-3"}`}>
-          <a href="/" className={`flex items-center gap-2.5 min-w-0 ${collapsed ? "justify-center" : ""}`}>
+        <div className={`flex h-14 items-center border-b border-gray-800 ${collapsed ? "justify-center" : "px-3"}`}>
+          <a href="/" className="flex items-center gap-2.5 min-w-0">
             <Zap className="h-5 w-5 text-blue-500 shrink-0" />
             {!collapsed && (
               <span className="text-sm font-semibold text-gray-100 truncate">
@@ -139,7 +139,7 @@ export default function DashboardLayout({
                     key={item.href}
                     href={item.href}
                     className={`flex items-center gap-2.5 rounded-md py-1.5 text-sm transition-colors relative ${
-                      collapsed ? "justify-center px-0" : "px-2"
+                      collapsed ? "justify-center" : "px-2"
                     } ${
                       active
                         ? "bg-blue-500/10 text-blue-400"
@@ -157,7 +157,7 @@ export default function DashboardLayout({
                 );
 
                 return collapsed ? (
-                  <Tooltip key={item.href} content={item.label}>
+                  <Tooltip key={item.href} content={item.label} className="w-full">
                     {link}
                   </Tooltip>
                 ) : (
@@ -171,7 +171,7 @@ export default function DashboardLayout({
         {/* GitHub link */}
         <div className="px-1.5 pb-1">
           {collapsed ? (
-            <Tooltip content="GitHub">
+            <Tooltip content="GitHub" className="w-full">
               <a
                 href="https://github.com/ydixken/krawall"
                 target="_blank"
