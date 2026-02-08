@@ -142,6 +142,11 @@ tasks:
       - pnpm test:coverage
 
   # Setup
+  playwright:install:
+    desc: Install Playwright browsers
+    cmds:
+      - pnpm exec playwright install chromium
+
   setup:
     desc: Initial project setup
     cmds:
@@ -152,6 +157,7 @@ tasks:
       - task: db:generate
       - task: db:push
       - task: db:seed
+      - pnpm exec playwright install chromium
       - echo "✅ Setup complete!"
       - echo "Run 'task dev' to start development server (workers auto-start)"
       - 'echo "Visit http://localhost:3000/guide for the interactive setup wizard"'

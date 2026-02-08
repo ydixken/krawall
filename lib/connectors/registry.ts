@@ -75,6 +75,7 @@ export class ConnectorRegistry {
     const { WebSocketConnector } = await import("./websocket");
     const { gRPCConnector } = await import("./grpc");
     const { SSEConnector } = await import("./sse");
+    const { BrowserWebSocketConnector } = await import("./browser-websocket");
 
     if (!this.isRegistered("HTTP_REST")) {
       this.register("HTTP_REST", HTTPConnector);
@@ -87,6 +88,9 @@ export class ConnectorRegistry {
     }
     if (!this.isRegistered("SSE")) {
       this.register("SSE", SSEConnector);
+    }
+    if (!this.isRegistered("BROWSER_WEBSOCKET")) {
+      this.register("BROWSER_WEBSOCKET", BrowserWebSocketConnector);
     }
   }
 }
