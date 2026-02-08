@@ -20,6 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const forceFresh = request.nextUrl.searchParams.get("fresh") === "true";
 
   try {
     // Fetch target
@@ -69,6 +70,11 @@ export async function GET(
       protocolConfig: target.protocolConfig as any,
       timeout,
     };
+
+    // Pass forceFresh flag through protocolConfig for browser discovery
+    if (forceFresh && connectorConfig.protocolConfig) {
+      connectorConfig.protocolConfig = { ...connectorConfig.protocolConfig, _forceFresh: true };
+    }
 
     const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream();
@@ -160,6 +166,17 @@ export async function GET(
             timestamp: new Date().toISOString(),
             data: { response: testResponse?.substring(0, 200) },
           });
+
+          // Stream the raw response so the user can see the actual data structure
+          // and configure their response template path correctly
+          if (response.metadata?.rawResponse) {
+            await send({
+              type: "raw_response",
+              data: response.metadata.rawResponse,
+              extractedContent: testResponse,
+              timestamp: new Date().toISOString(),
+            });
+          }
         } catch (messageError) {
           testError = (messageError as Error).message;
           await send({

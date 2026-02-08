@@ -174,16 +174,11 @@ export class WebSocketConnector extends BaseConnector {
           },
         });
       }
-    } catch (error) {
-      console.error("Failed to parse WebSocket message:", error);
-
-      // Reject all queued messages
-      while (this.messageQueue.length > 0) {
-        const queued = this.messageQueue.shift();
-        if (queued) {
-          queued.reject(error as Error);
-        }
-      }
+    } catch {
+      // Warn but don't reject queued messages for a single unparseable frame.
+      // This handles protocol frames, keepalives, or partial messages gracefully.
+      // Queued messages will time out individually if no valid response arrives.
+      console.warn("Skipping unparseable WebSocket frame:", data.substring(0, 100));
     }
   }
 

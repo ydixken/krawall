@@ -48,6 +48,7 @@ const {
     }),
     on: vi.fn(),
     removeListener: vi.fn(),
+    removeAllListeners: vi.fn(),
     readyState: 1,
     close: vi.fn(),
     ping: vi.fn(),

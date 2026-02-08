@@ -86,6 +86,9 @@ export class BrowserDiscoveryService {
       }
       onProgress?.("Page loaded");
 
+      // 5b. Dismiss cookie consent banners (common on EU sites)
+      await this.dismissCookieBanners(page, onProgress);
+
       // 6. Create WidgetDetector
       const widgetDetector = new WidgetDetector(page, config);
       widgetDetector.setOnProgress((message, data) => {
@@ -186,6 +189,17 @@ export class BrowserDiscoveryService {
         discoveredAt: new Date(),
       };
 
+      // 13b. Log discovered credentials for debugging
+      onProgress?.(`Credentials: ${result.cookies.length} cookies, ${Object.keys(result.headers).length} headers, ${Object.keys(result.localStorage).length} localStorage, ${Object.keys(result.sessionStorage).length} sessionStorage`);
+      if (result.cookies.length > 0) {
+        onProgress?.(`Cookies: ${result.cookies.map(c => `${c.name}=${c.value.substring(0, 20)}${c.value.length > 20 ? "..." : ""} (${c.domain})`).join(", ")}`);
+      }
+      if (Object.keys(result.headers).length > 0) {
+        onProgress?.(`Headers: ${Object.entries(result.headers).map(([k, v]) => `${k}: ${String(v).substring(0, 40)}${String(v).length > 40 ? "..." : ""}`).join(", ")}`);
+      }
+      onProgress?.(`Protocol: ${detectedProtocol}${socketIoConfig ? ` (SID: ${socketIoConfig.sid})` : ""}`);
+      onProgress?.(`Frames captured: ${capturedWs.frames.length} (${capturedWs.frames.filter(f => f.direction === "sent").length} sent, ${capturedWs.frames.filter(f => f.direction === "received").length} received)`);
+
       // 14. Cache result in Redis
       const ttlMs = config.session?.maxAge ?? DEFAULT_SESSION_MAX_AGE;
       await this.setCached(targetId, result, ttlMs);
@@ -205,6 +219,49 @@ export class BrowserDiscoveryService {
       }
       if (!config.session?.keepBrowserAlive) {
         await this.closeBrowser();
+      }
+    }
+  }
+
+  /**
+   * Dismiss common cookie consent banners that block page interaction.
+   * Tries known selectors for popular consent managers (OneTrust, CookieBot, etc.).
+   */
+  private static async dismissCookieBanners(
+    page: Page,
+    onProgress?: (message: string) => void
+  ): Promise<void> {
+    const COOKIE_ACCEPT_SELECTORS = [
+      // OneTrust
+      "#onetrust-accept-btn-handler",
+      ".onetrust-close-btn-handler",
+      // CookieBot
+      "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll",
+      "#CybotCookiebotDialogBodyButtonAccept",
+      // Generic patterns
+      '[data-testid="cookie-accept"]',
+      'button[data-action="accept"]',
+      'button[id*="cookie"][id*="accept"]',
+      'button[class*="cookie"][class*="accept"]',
+      'button:has-text("Accept all")',
+      'button:has-text("Alle akzeptieren")',
+      'button:has-text("Accept All Cookies")',
+      'button:has-text("Alle Cookies akzeptieren")',
+    ];
+
+    for (const selector of COOKIE_ACCEPT_SELECTORS) {
+      try {
+        const locator = page.locator(selector).first();
+        const visible = await locator.isVisible({ timeout: 500 }).catch(() => false);
+        if (visible) {
+          await locator.click({ timeout: 3000 });
+          onProgress?.(`Dismissed cookie banner (${selector})`);
+          // Wait briefly for the banner to animate away
+          await page.waitForTimeout(1000);
+          return;
+        }
+      } catch {
+        // Selector not found or not clickable, try next
       }
     }
   }

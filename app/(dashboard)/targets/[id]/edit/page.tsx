@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTestConnectionStream } from "@/lib/hooks/use-test-connection-stream";
 import { DiscoveryProgressTimeline } from "@/components/discovery-progress-timeline";
+import { RawResponseViewer } from "@/components/targets/raw-response-viewer";
 
 interface TargetData {
   id: string;
@@ -24,6 +25,7 @@ interface TargetData {
     tokenUsagePath?: string;
     errorPath?: string;
   };
+  protocolConfig?: Record<string, unknown>;
   isActive: boolean;
   lastTestAt?: string;
   lastTestSuccess?: boolean;
@@ -80,8 +82,18 @@ export default function EditTargetPage() {
   const [errorPath, setErrorPath] = useState("");
   const [isActive, setIsActive] = useState(true);
 
+  // Browser WebSocket protocolConfig state
+  const [widgetStrategy, setWidgetStrategy] = useState<"heuristic" | "selector" | "steps">("heuristic");
+  const [widgetSelector, setWidgetSelector] = useState("");
+  const [hintButtonText, setHintButtonText] = useState("");
+  const [hintContainsClass, setHintContainsClass] = useState("");
+  const [hintContainsId, setHintContainsId] = useState("");
+  const [hintIframeSrc, setHintIframeSrc] = useState("");
+  const [wsFilterPattern, setWsFilterPattern] = useState("");
+  const [browserHeadless, setBrowserHeadless] = useState(true);
+
   // Streaming discovery test
-  const { events: streamEvents, status: streamStatus, result: streamResult, startTest: startStreamTest, reset: resetStream } = useTestConnectionStream(targetId);
+  const { events: streamEvents, status: streamStatus, result: streamResult, rawResponse: streamRawResponse, startTest: startStreamTest, reset: resetStream } = useTestConnectionStream(targetId);
 
   // Last test info
   const [lastTestAt, setLastTestAt] = useState<string | null>(null);
@@ -121,6 +133,32 @@ export default function EditTargetPage() {
         setTokenUsagePath(t.responseTemplate?.tokenUsagePath || "");
         setErrorPath(t.responseTemplate?.errorPath || "");
         setIsActive(t.isActive);
+
+        // Load protocolConfig for Browser WebSocket
+        if (t.protocolConfig && typeof t.protocolConfig === "object") {
+          const pc = t.protocolConfig as Record<string, any>;
+          // For BROWSER_WEBSOCKET, pageUrl is the endpoint
+          if (pc.pageUrl && t.connectorType === "BROWSER_WEBSOCKET") {
+            setEndpoint(pc.pageUrl);
+          }
+          if (pc.widgetDetection) {
+            setWidgetStrategy(pc.widgetDetection.strategy || "heuristic");
+            setWidgetSelector(pc.widgetDetection.selector || "");
+            if (pc.widgetDetection.hints) {
+              setHintButtonText((pc.widgetDetection.hints.buttonText || []).join(", "));
+              setHintContainsClass((pc.widgetDetection.hints.containsClass || []).join(", "));
+              setHintContainsId((pc.widgetDetection.hints.containsId || []).join(", "));
+              setHintIframeSrc((pc.widgetDetection.hints.iframeSrc || []).join(", "));
+            }
+          }
+          if (pc.wsFilter) {
+            setWsFilterPattern(pc.wsFilter.urlPattern || "");
+          }
+          if (pc.browser) {
+            setBrowserHeadless(pc.browser.headless !== false);
+          }
+        }
+
         setLastTestAt(t.lastTestAt || null);
         setLastTestSuccess(t.lastTestSuccess ?? null);
         setLastTestError(t.lastTestError || null);
@@ -168,6 +206,23 @@ export default function EditTargetPage() {
             tokenUsagePath: tokenUsagePath || undefined,
             errorPath: errorPath || undefined,
           },
+          ...(connectorType === "BROWSER_WEBSOCKET" ? {
+            protocolConfig: {
+              pageUrl: endpoint,
+              widgetDetection: {
+                strategy: widgetStrategy,
+                ...(widgetStrategy === "selector" && widgetSelector ? { selector: widgetSelector } : {}),
+                hints: {
+                  ...(hintButtonText ? { buttonText: hintButtonText.split(",").map(s => s.trim()).filter(Boolean) } : {}),
+                  ...(hintContainsClass ? { containsClass: hintContainsClass.split(",").map(s => s.trim()).filter(Boolean) } : {}),
+                  ...(hintContainsId ? { containsId: hintContainsId.split(",").map(s => s.trim()).filter(Boolean) } : {}),
+                  ...(hintIframeSrc ? { iframeSrc: hintIframeSrc.split(",").map(s => s.trim()).filter(Boolean) } : {}),
+                },
+              },
+              ...(wsFilterPattern ? { wsFilter: { urlPattern: wsFilterPattern } } : {}),
+              browser: { headless: browserHeadless },
+            },
+          } : {}),
           isActive,
         }),
       });
@@ -342,13 +397,19 @@ export default function EditTargetPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Endpoint URL</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            {connectorType === "BROWSER_WEBSOCKET" ? "Page URL" : "Endpoint URL"}
+          </label>
           <input
             type="text"
             value={endpoint}
             onChange={(e) => setEndpoint(e.target.value)}
+            placeholder={connectorType === "BROWSER_WEBSOCKET" ? "https://example.com/support" : "https://api.example.com/chat"}
             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+          {connectorType === "BROWSER_WEBSOCKET" && (
+            <p className="text-xs text-gray-500 mt-1">The web page containing the chat widget (WebSocket URL is discovered automatically)</p>
+          )}
         </div>
 
         {/* Auth fields */}
@@ -413,6 +474,119 @@ export default function EditTargetPage() {
           </div>
         )}
       </div>
+
+      {/* Browser WebSocket Configuration */}
+      {connectorType === "BROWSER_WEBSOCKET" && (
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 space-y-4">
+          <h3 className="text-lg font-semibold text-white">Browser Discovery</h3>
+          <p className="text-xs text-gray-500">
+            Configure how the browser discovers the chat widget and captures the WebSocket connection from the Page URL above.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Widget Detection Strategy</label>
+            <select
+              value={widgetStrategy}
+              onChange={(e) => setWidgetStrategy(e.target.value as "heuristic" | "selector" | "steps")}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="heuristic">Heuristic (auto-detect using hints)</option>
+              <option value="selector">Selector (direct CSS selector)</option>
+              <option value="steps">Steps (scripted interaction)</option>
+            </select>
+          </div>
+
+          {widgetStrategy === "selector" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">CSS Selector</label>
+              <input
+                type="text"
+                value={widgetSelector}
+                onChange={(e) => setWidgetSelector(e.target.value)}
+                placeholder='button[data-chat], .chat-launcher, #chat-button'
+                className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">CSS selector for the chat widget trigger element</p>
+            </div>
+          )}
+
+          {widgetStrategy === "heuristic" && (
+            <div className="space-y-3 border border-gray-700 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-300">Detection Hints</h4>
+              <p className="text-xs text-gray-500">Optional hints to guide the auto-detection engine. Separate multiple values with commas.</p>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Button Text</label>
+                <input
+                  type="text"
+                  value={hintButtonText}
+                  onChange={(e) => setHintButtonText(e.target.value)}
+                  placeholder='e.g. "Jetzt chatten", "Start Chat"'
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">CSS Class Fragments</label>
+                <input
+                  type="text"
+                  value={hintContainsClass}
+                  onChange={(e) => setHintContainsClass(e.target.value)}
+                  placeholder='e.g. "chat-widget", "launcher-button"'
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">ID Fragments</label>
+                <input
+                  type="text"
+                  value={hintContainsId}
+                  onChange={(e) => setHintContainsId(e.target.value)}
+                  placeholder='e.g. "chat-button", "widget"'
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Iframe Src Fragments</label>
+                <input
+                  type="text"
+                  value={hintIframeSrc}
+                  onChange={(e) => setHintIframeSrc(e.target.value)}
+                  placeholder='e.g. "intercom", "drift", "zendesk"'
+                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3 border border-gray-700 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-300">Advanced</h4>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">WebSocket URL Filter (regex)</label>
+              <input
+                type="text"
+                value={wsFilterPattern}
+                onChange={(e) => setWsFilterPattern(e.target.value)}
+                placeholder="Optional — filter captured WS connections by URL pattern"
+                className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={browserHeadless}
+                onChange={(e) => setBrowserHeadless(e.target.checked)}
+                className="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
+              />
+              Headless browser (uncheck to see the browser window for debugging)
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* Request Template */}
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 space-y-4">
@@ -530,13 +704,22 @@ export default function EditTargetPage() {
           <p className="text-xs text-gray-500 mb-3">
             Stream live progress from browser discovery, widget detection, and WebSocket capture.
           </p>
-          <button
-            onClick={startStreamTest}
-            disabled={streamStatus === "streaming"}
-            className="px-4 py-2 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            {streamStatus === "streaming" ? "Running Discovery..." : "Run Discovery Test"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => startStreamTest()}
+              disabled={streamStatus === "streaming"}
+              className="px-4 py-2 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {streamStatus === "streaming" ? "Running Discovery..." : "Run Discovery Test"}
+            </button>
+            <button
+              onClick={() => startStreamTest({ fresh: true })}
+              disabled={streamStatus === "streaming"}
+              className="px-4 py-2 bg-amber-700 hover:bg-amber-600 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Clear Cache &amp; Re-discover
+            </button>
+          </div>
 
           <DiscoveryProgressTimeline events={streamEvents} status={streamStatus} />
 
@@ -559,6 +742,15 @@ export default function EditTargetPage() {
                 <div className="text-red-400 text-xs mt-2">{streamResult.data.error}</div>
               )}
             </div>
+          )}
+
+          {streamRawResponse && (
+            <RawResponseViewer
+              rawResponse={streamRawResponse.data}
+              extractedContent={streamRawResponse.extractedContent}
+              currentResponsePath={responsePath}
+              onSelectPath={(path) => setContentPath(path)}
+            />
           )}
         </div>
       )}

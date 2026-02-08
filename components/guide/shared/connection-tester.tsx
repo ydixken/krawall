@@ -5,6 +5,7 @@ import { Check, X, Loader2, RefreshCw, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTestConnectionStream } from "@/lib/hooks/use-test-connection-stream";
 import { DiscoveryProgressTimeline } from "@/components/discovery-progress-timeline";
+import { RawResponseViewer } from "@/components/targets/raw-response-viewer";
 
 type TestStatus = "idle" | "testing" | "success" | "failure";
 
@@ -26,7 +27,7 @@ export function ConnectionTester({
   onSuccess,
 }: ConnectionTesterProps) {
   const isBrowserWs = connectorType === "BROWSER_WEBSOCKET";
-  const { events: streamEvents, status: streamStatus, result: streamResult, startTest: startStreamTest } = useTestConnectionStream(isBrowserWs ? targetId : null);
+  const { events: streamEvents, status: streamStatus, result: streamResult, rawResponse: streamRawResponse, startTest: startStreamTest } = useTestConnectionStream(isBrowserWs ? targetId : null);
   const [status, setStatus] = useState<TestStatus>("idle");
   const [latency, setLatency] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +139,7 @@ export function ConnectionTester({
           </Button>
         )}
         {status === "idle" && isBrowserWs && streamStatus === "idle" && (
-          <Button onClick={startStreamTest}>
+          <Button onClick={() => startStreamTest()}>
             <Wifi className="h-4 w-4 mr-1" />
             Test Discovery
           </Button>
@@ -167,6 +168,15 @@ export function ConnectionTester({
       {isBrowserWs && (streamEvents.length > 0 || streamStatus === "streaming") && (
         <div className="w-full max-w-md">
           <DiscoveryProgressTimeline events={streamEvents} status={streamStatus} />
+        </div>
+      )}
+
+      {isBrowserWs && streamRawResponse && (
+        <div className="w-full max-w-md">
+          <RawResponseViewer
+            rawResponse={streamRawResponse.data}
+            extractedContent={streamRawResponse.extractedContent}
+          />
         </div>
       )}
 

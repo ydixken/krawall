@@ -29,6 +29,10 @@ export function useTestConnectionStream(targetId: string | null) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [status, setStatus] = useState<StreamStatus>("idle");
   const [result, setResult] = useState<TestStreamResult | null>(null);
+  const [rawResponse, setRawResponse] = useState<{
+    data: unknown;
+    extractedContent?: string;
+  } | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const cleanup = useCallback(() => {
@@ -43,24 +47,34 @@ export function useTestConnectionStream(targetId: string | null) {
     setEvents([]);
     setStatus("idle");
     setResult(null);
+    setRawResponse(null);
   }, [cleanup]);
 
-  const startTest = useCallback(() => {
+  const startTest = useCallback((options?: { fresh?: boolean }) => {
     if (!targetId) return;
 
     // Reset state
     setEvents([]);
     setStatus("streaming");
     setResult(null);
+    setRawResponse(null);
     cleanup();
 
-    const es = new EventSource(`/api/targets/${targetId}/test/stream`);
+    const params = options?.fresh ? "?fresh=true" : "";
+    const es = new EventSource(`/api/targets/${targetId}/test/stream${params}`);
     eventSourceRef.current = es;
 
     es.onmessage = (e) => {
       try {
         const data: StreamEvent = JSON.parse(e.data);
         setEvents((prev) => [...prev, data]);
+
+        if (data.type === "raw_response") {
+          setRawResponse({
+            data: (data as any).data,
+            extractedContent: (data as any).extractedContent,
+          });
+        }
 
         if (data.type === "result") {
           const testResult: TestStreamResult = {
@@ -92,5 +106,5 @@ export function useTestConnectionStream(targetId: string | null) {
     return cleanup;
   }, [cleanup]);
 
-  return { events, status, result, startTest, reset };
+  return { events, status, result, rawResponse, startTest, reset };
 }

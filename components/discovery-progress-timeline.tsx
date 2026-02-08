@@ -20,7 +20,7 @@ interface DiscoveryProgressTimelineProps {
 
 function getEventIcon(event: StreamEvent) {
   const type = event.type;
-  const message = event.message.toLowerCase();
+  const message = (event.message ?? "").toLowerCase();
 
   if (type === "error" || message.includes("failed")) {
     return <X className="h-3.5 w-3.5 text-red-400" />;
@@ -124,7 +124,7 @@ export function DiscoveryProgressTimeline({
                   </span>
 
                   {/* Debug data for widget detection failures */}
-                  {event.data && event.message.includes("detection failed") && (
+                  {event.data && event.message?.includes("detection failed") && (
                     <div className="mt-1.5 p-2 rounded bg-gray-800 border border-gray-700 text-[10px] space-y-1">
                       {event.data.pageTitle != null && (
                         <div>

@@ -51,11 +51,13 @@ export class BrowserWebSocketConnector extends BaseConnector {
     }
 
     // 2. Run browser discovery
+    const forceFresh = !!(this.protocolConfig as unknown as Record<string, unknown>)?._forceFresh;
     this.emitProgress("connect", "Starting browser discovery");
     try {
       this.discoveryResult = await BrowserDiscoveryService.discover({
         config: this.protocolConfig,
         targetId: this.targetId,
+        forceFresh,
         onProgress: (message: string) => {
           this.emitProgress("discovery", message);
         },
@@ -91,6 +93,11 @@ export class BrowserWebSocketConnector extends BaseConnector {
       // We use a type assertion since WebSocketConnector doesn't expose its ws
       const rawWs = (this.internalConnector as unknown as { ws: import("ws").default | null }).ws;
       if (rawWs) {
+        // SocketIOHandler manages ALL frame parsing in Socket.IO mode.
+        // Remove WebSocketConnector's generic handler to prevent JSON.parse
+        // errors on protocol frames ("0{...}", "40", "2", "42[...]").
+        rawWs.removeAllListeners("message");
+
         this.socketIOHandler = new SocketIOHandler(
           rawWs,
           this.discoveryResult.socketIoConfig
@@ -235,10 +242,24 @@ export class BrowserWebSocketConnector extends BaseConnector {
       };
     }
 
+    // Socket.IO mode: Engine.IO heartbeat already monitors liveness via
+    // text-frame ping/pong ("2"/"3"). WS-level ping won't get a pong from
+    // Socket.IO servers. Just verify the underlying WebSocket is still open.
+    if (this.socketIOHandler && this.discoveryResult?.detectedProtocol === "socket.io") {
+      const rawWs = (this.internalConnector as unknown as { ws: import("ws").default | null }).ws;
+      const isOpen = rawWs?.readyState === 1; // WebSocket.OPEN
+      return {
+        healthy: isOpen,
+        latencyMs: 0,
+        error: isOpen ? undefined : "WebSocket is not open",
+        timestamp: new Date(),
+      };
+    }
+
+    // Raw WS mode: delegate to internal connector's ping-based health check
     const health = await this.internalConnector.healthCheck();
 
     if (!health.healthy && this.discoveryResult) {
-      // Check if the session has expired
       const maxAge = this.protocolConfig?.session?.maxAge ?? 300_000;
       const elapsed = Date.now() - this.discoveryResult.discoveredAt.getTime();
 

@@ -57,6 +57,13 @@ const {
         if (idx >= 0) cbs.splice(idx, 1);
       }
     }),
+    removeAllListeners: vi.fn().mockImplementation((event?: string) => {
+      if (event) {
+        mockWsListeners.delete(event);
+      } else {
+        mockWsListeners.clear();
+      }
+    }),
     readyState: 1,
     close: vi.fn(),
     ping: vi.fn(),
@@ -400,7 +407,40 @@ describe("BrowserWebSocketConnector", () => {
   // =========================================================================
 
   describe("healthCheck", () => {
-    it("should delegate to internal connector when healthy", async () => {
+    it("should check readyState in Socket.IO mode instead of ping-based health check", async () => {
+      const connector = new BrowserWebSocketConnector("target-1", createConfig());
+      await connector.connect();
+
+      const health = await connector.healthCheck();
+
+      expect(health.healthy).toBe(true);
+      expect(health.latencyMs).toBe(0);
+      // In Socket.IO mode, internal healthCheck (ping-based) is NOT called
+      expect(mockInternalHealthCheck).not.toHaveBeenCalled();
+    });
+
+    it("should return unhealthy in Socket.IO mode when WS is not open", async () => {
+      const connector = new BrowserWebSocketConnector("target-1", createConfig());
+      await connector.connect();
+
+      mockWs.readyState = 3; // WebSocket.CLOSED
+
+      const health = await connector.healthCheck();
+
+      expect(health.healthy).toBe(false);
+      expect(health.error).toBe("WebSocket is not open");
+
+      // Restore for other tests
+      mockWs.readyState = 1;
+    });
+
+    it("should delegate to internal connector in raw mode", async () => {
+      mockDiscover.mockResolvedValueOnce({
+        ...mockDiscoveryResult,
+        detectedProtocol: "raw",
+        socketIoConfig: undefined,
+      });
+
       const connector = new BrowserWebSocketConnector("target-1", createConfig());
       await connector.connect();
 
@@ -419,7 +459,13 @@ describe("BrowserWebSocketConnector", () => {
       expect(health.error).toBe("Not connected");
     });
 
-    it("should attempt rediscovery when unhealthy and session expired", async () => {
+    it("should attempt rediscovery in raw mode when unhealthy and session expired", async () => {
+      mockDiscover.mockResolvedValueOnce({
+        ...mockDiscoveryResult,
+        detectedProtocol: "raw",
+        socketIoConfig: undefined,
+      });
+
       const connector = new BrowserWebSocketConnector("target-1", createConfig());
       await connector.connect();
 
@@ -439,7 +485,13 @@ describe("BrowserWebSocketConnector", () => {
       expect(mockDiscover).toHaveBeenCalledTimes(2);
     });
 
-    it("should return unhealthy when rediscovery fails", async () => {
+    it("should return unhealthy when rediscovery fails in raw mode", async () => {
+      mockDiscover.mockResolvedValueOnce({
+        ...mockDiscoveryResult,
+        detectedProtocol: "raw",
+        socketIoConfig: undefined,
+      });
+
       const connector = new BrowserWebSocketConnector("target-1", createConfig());
       await connector.connect();
 

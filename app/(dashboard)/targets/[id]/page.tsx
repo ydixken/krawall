@@ -6,6 +6,7 @@ import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 import { useTestConnectionStream } from "@/lib/hooks/use-test-connection-stream";
 import { DiscoveryProgressTimeline } from "@/components/discovery-progress-timeline";
+import { RawResponseViewer } from "@/components/targets/raw-response-viewer";
 
 interface TargetData {
   id: string;
@@ -94,7 +95,7 @@ export default function TargetDetailPage() {
   const [refreshData, setRefreshData] = useState<TokenRefreshData | null>(null);
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [refreshActionLoading, setRefreshActionLoading] = useState(false);
-  const { events: streamEvents, status: streamStatus, result: streamResult, startTest: startStreamTest } = useTestConnectionStream(targetId);
+  const { events: streamEvents, status: streamStatus, result: streamResult, rawResponse: streamRawResponse, startTest: startStreamTest } = useTestConnectionStream(targetId);
 
   useEffect(() => {
     fetchTarget();
@@ -640,7 +641,7 @@ export default function TargetDetailPage() {
 
           {target.connectorType === "BROWSER_WEBSOCKET" && (
             <button
-              onClick={startStreamTest}
+              onClick={() => startStreamTest()}
               disabled={streamStatus === "streaming"}
               className="px-4 py-2 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-medium transition-colors"
             >
@@ -681,6 +682,14 @@ export default function TargetDetailPage() {
         {/* Streaming Discovery Timeline - Browser WebSocket only */}
         {target.connectorType === "BROWSER_WEBSOCKET" && (streamEvents.length > 0 || streamStatus === "streaming") && (
           <DiscoveryProgressTimeline events={streamEvents} status={streamStatus} />
+        )}
+
+        {target.connectorType === "BROWSER_WEBSOCKET" && streamRawResponse && (
+              <RawResponseViewer
+                rawResponse={streamRawResponse.data}
+                extractedContent={streamRawResponse.extractedContent}
+                currentResponsePath={target?.responseTemplate?.responsePath}
+              />
         )}
 
         {target.connectorType === "BROWSER_WEBSOCKET" && streamResult && (
