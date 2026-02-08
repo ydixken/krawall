@@ -21,6 +21,10 @@ import { SocketIOHandler } from "./browser/socketio-handler";
 import { CredentialExtractor } from "./browser/credential-extractor";
 import { WebSocketConnector } from "./websocket";
 import type { BrowserWebSocketProtocolConfig, DiscoveryResult } from "./browser/types";
+import {
+  subscribeTokenRefreshed,
+  type TokenRefreshSubscription,
+} from "@/lib/jobs/token-refresh/events";
 
 export class BrowserWebSocketConnector extends BaseConnector {
   private internalConnector: WebSocketConnector | null = null;
@@ -28,6 +32,7 @@ export class BrowserWebSocketConnector extends BaseConnector {
   private discoveryResult: DiscoveryResult | null = null;
   private protocolConfig: BrowserWebSocketProtocolConfig | null = null;
   private _connected = false;
+  private refreshSubscription: TokenRefreshSubscription | null = null;
 
   constructor(targetId: string, config: ConnectorConfig) {
     super(targetId, config);
@@ -90,12 +95,23 @@ export class BrowserWebSocketConnector extends BaseConnector {
     }
 
     this._connected = true;
+
+    // 6. Subscribe to token refresh notifications if enabled
+    if (this.protocolConfig?.session?.tokenRefreshEnabled !== false) {
+      this.subscribeToRefreshNotifications();
+    }
   }
 
   /**
    * Disconnect from the WebSocket and clean up resources.
    */
   async disconnect(): Promise<void> {
+    // Unsubscribe from token refresh notifications
+    if (this.refreshSubscription) {
+      await this.refreshSubscription.unsubscribe();
+      this.refreshSubscription = null;
+    }
+
     if (this.socketIOHandler) {
       this.socketIOHandler.stop();
       this.socketIOHandler = null;
@@ -239,6 +255,57 @@ export class BrowserWebSocketConnector extends BaseConnector {
     }
 
     return health;
+  }
+
+  /**
+   * Subscribe to Redis Pub/Sub token refresh notifications.
+   * When a refresh worker updates the cached discovery result for this target,
+   * we hot-swap the stored credentials without disconnecting the WebSocket.
+   */
+  private async subscribeToRefreshNotifications(): Promise<void> {
+    try {
+      this.refreshSubscription = await subscribeTokenRefreshed((event) => {
+        if (event.targetId === this.targetId) {
+          this.updateCredentials().catch((error) => {
+            console.error(
+              `Failed to update credentials for target ${this.targetId}:`,
+              (error as Error).message
+            );
+          });
+        }
+      });
+    } catch (error) {
+      // Non-fatal — connector continues without proactive refresh
+      console.warn(
+        `Failed to subscribe to token refresh for target ${this.targetId}:`,
+        (error as Error).message
+      );
+    }
+  }
+
+  /**
+   * Hot-swap credentials from the refreshed Redis cache.
+   * Reads the latest DiscoveryResult, rebuilds internal config (headers, cookies),
+   * and stores it for the next reconnect. Does NOT disconnect the active WebSocket.
+   */
+  private async updateCredentials(): Promise<void> {
+    const freshResult = await BrowserDiscoveryService.getCached(this.targetId);
+    if (!freshResult) {
+      console.warn(`No cached discovery result for target ${this.targetId} after refresh`);
+      return;
+    }
+
+    this.discoveryResult = freshResult;
+
+    // Rebuild the internal config with new headers/cookies for the next reconnect
+    const newConfig = this.buildInternalConfig(freshResult);
+
+    // Store the config on the internal connector so the next reconnect uses it
+    if (this.internalConnector) {
+      (this.internalConnector as unknown as { config: ConnectorConfig }).config = newConfig;
+    }
+
+    console.log(`Token refresh applied for target ${this.targetId}`);
   }
 
   /**

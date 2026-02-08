@@ -153,6 +153,22 @@ export async function POST(
       },
     });
 
+    // Auto-start token refresh for verified Browser WebSocket targets
+    if (success && target.connectorType === "BROWSER_WEBSOCKET") {
+      try {
+        const { TokenRefreshScheduler } = await import(
+          "@/lib/jobs/token-refresh/scheduler"
+        );
+        await TokenRefreshScheduler.schedule(
+          id,
+          target.protocolConfig as any
+        );
+      } catch (scheduleError) {
+        console.warn("Failed to auto-schedule token refresh:", scheduleError);
+        // Non-blocking — don't fail the test response
+      }
+    }
+
     return NextResponse.json({
       success,
       data: {

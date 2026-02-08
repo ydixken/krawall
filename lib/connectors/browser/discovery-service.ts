@@ -34,13 +34,15 @@ export class BrowserDiscoveryService {
    * capture the WebSocket connection, detect protocol, extract credentials.
    */
   static async discover(options: BrowserDiscoveryOptions): Promise<DiscoveryResult> {
-    const { config, targetId, onProgress } = options;
+    const { config, targetId, onProgress, forceFresh } = options;
 
-    // 1. Check Redis cache first
-    const cached = await this.getCached(targetId);
-    if (cached) {
-      onProgress?.("Using cached discovery result");
-      return cached;
+    // 1. Check Redis cache first (skip if forceFresh)
+    if (!forceFresh) {
+      const cached = await this.getCached(targetId);
+      if (cached) {
+        onProgress?.("Using cached discovery result");
+        return cached;
+      }
     }
 
     onProgress?.("Starting browser discovery");

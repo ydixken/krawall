@@ -95,6 +95,12 @@ export interface BrowserWebSocketProtocolConfig {
     maxAge?: number;
     /** Keep the browser instance alive between discoveries for reuse */
     keepBrowserAlive?: boolean;
+    /** Fraction of maxAge at which to proactively refresh tokens (0.0-1.0, default 0.75) */
+    refreshAheadPercent?: number;
+    /** Enable proactive token refresh via background worker (default true) */
+    tokenRefreshEnabled?: boolean;
+    /** Stop warning after N consecutive refresh failures (default 5) */
+    maxConsecutiveRefreshFailures?: number;
   };
 
   /** Protocol detection and configuration */
@@ -182,4 +188,6 @@ export interface BrowserDiscoveryOptions {
   targetId: string;
   /** Optional progress callback for UI updates */
   onProgress?: (message: string) => void;
+  /** When true, bypass Redis cache and force a fresh browser discovery */
+  forceFresh?: boolean;
 }
