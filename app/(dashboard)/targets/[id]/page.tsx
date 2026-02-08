@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { RefreshCw } from "lucide-react";
 
 interface TargetData {
   id: string;
@@ -44,6 +45,19 @@ interface TestResult {
   error?: string;
 }
 
+interface TokenRefreshData {
+  targetId: string;
+  isActive: boolean;
+  isScheduled: boolean;
+  lastRefreshAt: string | null;
+  lastRefreshStatus: "success" | "failed" | null;
+  lastRefreshError: string | null;
+  consecutiveFailures: number;
+  nextRefreshAt: string | null;
+  refreshIntervalMs: number | null;
+  queueStats: { waiting: number; active: number; completed: number; failed: number; total: number };
+}
+
 const getConnectorBadgeColor = (type: string) => {
   const colors: Record<string, string> = {
     HTTP_REST: "bg-blue-900 text-blue-300",
@@ -75,6 +89,9 @@ export default function TargetDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [refreshData, setRefreshData] = useState<TokenRefreshData | null>(null);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshActionLoading, setRefreshActionLoading] = useState(false);
 
   useEffect(() => {
     fetchTarget();
@@ -155,6 +172,35 @@ export default function TargetDetailPage() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const fetchRefreshStatus = async () => {
+    try {
+      const res = await fetch(`/api/targets/${targetId}/token-refresh`);
+      const data = await res.json();
+      if (data.success) setRefreshData(data.data);
+    } catch { /* silent */ }
+  };
+
+  useEffect(() => {
+    if (target?.connectorType !== "BROWSER_WEBSOCKET") return;
+    setRefreshLoading(true);
+    fetchRefreshStatus().finally(() => setRefreshLoading(false));
+    const interval = setInterval(fetchRefreshStatus, 5000);
+    return () => clearInterval(interval);
+  }, [target?.connectorType, targetId]);
+
+  const handleRefreshAction = async (action: "start" | "stop" | "force") => {
+    setRefreshActionLoading(true);
+    try {
+      await fetch(`/api/targets/${targetId}/token-refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      await fetchRefreshStatus();
+    } catch { /* silent */ }
+    finally { setRefreshActionLoading(false); }
   };
 
   if (loading) {
@@ -449,6 +495,122 @@ export default function TargetDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Token Refresh — only for BROWSER_WEBSOCKET */}
+      {target.connectorType === "BROWSER_WEBSOCKET" && (
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Token Refresh</h3>
+              {refreshData?.isActive && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {refreshData?.isActive ? (
+                <>
+                  <button
+                    onClick={() => handleRefreshAction("force")}
+                    disabled={refreshActionLoading}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded-md text-xs font-medium transition-colors"
+                  >
+                    Force Refresh
+                  </button>
+                  <button
+                    onClick={() => handleRefreshAction("stop")}
+                    disabled={refreshActionLoading}
+                    className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 text-white rounded-md text-xs font-medium transition-colors"
+                  >
+                    Stop
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleRefreshAction("start")}
+                  disabled={refreshActionLoading}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 text-white rounded-md text-xs font-medium transition-colors"
+                >
+                  Start Refresh
+                </button>
+              )}
+            </div>
+          </div>
+
+          {refreshLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-skeleton h-4 w-full rounded bg-gray-700" />
+              ))}
+            </div>
+          ) : refreshData ? (
+            <div className="space-y-3">
+              {/* Status grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gray-900 rounded-lg p-3">
+                  <div className="text-[11px] text-gray-500 uppercase mb-1">Status</div>
+                  <div className={`text-sm font-medium ${refreshData.isActive ? "text-emerald-400" : "text-gray-400"}`}>
+                    {refreshData.isActive ? "Active" : "Inactive"}
+                  </div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3">
+                  <div className="text-[11px] text-gray-500 uppercase mb-1">Last Refresh</div>
+                  <div className="text-sm text-gray-300">
+                    {refreshData.lastRefreshAt
+                      ? new Date(refreshData.lastRefreshAt).toLocaleTimeString()
+                      : "Never"}
+                  </div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3">
+                  <div className="text-[11px] text-gray-500 uppercase mb-1">Result</div>
+                  <div className={`text-sm font-medium ${
+                    refreshData.lastRefreshStatus === "success" ? "text-emerald-400" :
+                    refreshData.lastRefreshStatus === "failed" ? "text-red-400" : "text-gray-400"
+                  }`}>
+                    {refreshData.lastRefreshStatus ?? "N/A"}
+                  </div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3">
+                  <div className="text-[11px] text-gray-500 uppercase mb-1">Interval</div>
+                  <div className="text-sm text-gray-300">
+                    {refreshData.refreshIntervalMs
+                      ? `${Math.round(refreshData.refreshIntervalMs / 1000)}s`
+                      : "N/A"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Error display */}
+              {refreshData.lastRefreshError && (
+                <div className="rounded-md border border-red-800/50 bg-red-900/10 px-3 py-2 text-xs text-red-400">
+                  {refreshData.lastRefreshError}
+                </div>
+              )}
+
+              {/* Consecutive failures warning */}
+              {refreshData.consecutiveFailures > 0 && (
+                <div className="rounded-md border border-amber-800/50 bg-amber-900/10 px-3 py-2 text-xs text-amber-400">
+                  {refreshData.consecutiveFailures} consecutive failure{refreshData.consecutiveFailures > 1 ? "s" : ""}
+                </div>
+              )}
+
+              {/* Next refresh time */}
+              {refreshData.nextRefreshAt && refreshData.isActive && (
+                <div className="text-xs text-gray-500">
+                  Next refresh: {new Date(refreshData.nextRefreshAt).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              Token refresh is not configured for this target. Run a connection test to auto-start.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Test Connection */}
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
