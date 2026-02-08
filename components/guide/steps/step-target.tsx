@@ -656,8 +656,8 @@ export function StepTarget() {
                 <span className="text-gray-200 font-medium">{form.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Endpoint</span>
-                <span className="text-gray-200 font-mono truncate max-w-xs">{form.endpoint}</span>
+                <span className="text-gray-500">{isBrowserWsPreset(selectedPresetId) ? "Page URL" : "Endpoint"}</span>
+                <span className="text-gray-200 font-mono truncate max-w-xs">{isBrowserWsPreset(selectedPresetId) ? form.protocolConfig?.pageUrl : form.endpoint}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Connector</span>
@@ -673,12 +673,13 @@ export function StepTarget() {
           <JsonPreview
             data={{
               name: form.name,
-              endpoint: form.endpoint,
+              endpoint: isBrowserWsPreset(selectedPresetId) ? form.protocolConfig?.pageUrl : form.endpoint,
               connectorType: form.connectorType,
               authType: form.authType,
               authConfig: form.authConfig,
               requestTemplate: form.requestTemplate,
               responseTemplate: form.responseTemplate,
+              ...(form.protocolConfig ? { protocolConfig: form.protocolConfig } : {}),
             }}
             title="Full Payload Preview"
             maskKeys={["token", "apiKey", "password"]}

@@ -1,0 +1,289 @@
+/**
+ * Browser WebSocket Connector
+ *
+ * Extends BaseConnector to provide automated browser-based WebSocket discovery.
+ * Uses Playwright to navigate to a chatbot page, detect the widget, capture the
+ * WebSocket connection, and then delegate message sending to an internal
+ * WebSocketConnector with the discovered credentials.
+ */
+
+import {
+  BaseConnector,
+  type ConnectorConfig,
+  type ConnectorResponse,
+  type HealthStatus,
+  type MessageMetadata,
+  ConnectorError,
+} from "./base";
+import { ConnectorRegistry } from "./registry";
+import { BrowserDiscoveryService } from "./browser/discovery-service";
+import { SocketIOHandler } from "./browser/socketio-handler";
+import { CredentialExtractor } from "./browser/credential-extractor";
+import { WebSocketConnector } from "./websocket";
+import type { BrowserWebSocketProtocolConfig, DiscoveryResult } from "./browser/types";
+
+export class BrowserWebSocketConnector extends BaseConnector {
+  private internalConnector: WebSocketConnector | null = null;
+  private socketIOHandler: SocketIOHandler | null = null;
+  private discoveryResult: DiscoveryResult | null = null;
+  private protocolConfig: BrowserWebSocketProtocolConfig | null = null;
+  private _connected = false;
+
+  constructor(targetId: string, config: ConnectorConfig) {
+    super(targetId, config);
+  }
+
+  /**
+   * Connect by running browser discovery and creating an internal WebSocket connection.
+   */
+  async connect(): Promise<void> {
+    // 1. Parse protocolConfig
+    this.protocolConfig = this.config.protocolConfig as unknown as BrowserWebSocketProtocolConfig;
+    if (!this.protocolConfig?.pageUrl) {
+      throw new ConnectorError(
+        "BrowserWebSocketConnector requires protocolConfig with a pageUrl"
+      );
+    }
+
+    // 2. Run browser discovery
+    try {
+      this.discoveryResult = await BrowserDiscoveryService.discover({
+        config: this.protocolConfig,
+        targetId: this.targetId,
+      });
+    } catch (error) {
+      throw new ConnectorError(
+        `Browser discovery failed: ${(error as Error).message}`,
+        error
+      );
+    }
+
+    // 3. Build internal WS ConnectorConfig
+    const internalConfig = this.buildInternalConfig(this.discoveryResult);
+
+    // 4. Create and connect internal WebSocketConnector
+    this.internalConnector = new WebSocketConnector(this.targetId, internalConfig);
+    try {
+      await this.internalConnector.connect();
+    } catch (error) {
+      throw new ConnectorError(
+        `Failed to connect to discovered WebSocket ${this.discoveryResult.wssUrl}: ${(error as Error).message}`,
+        error
+      );
+    }
+
+    // 5. If Socket.IO detected, set up handler
+    if (
+      this.discoveryResult.detectedProtocol === "socket.io" &&
+      this.discoveryResult.socketIoConfig
+    ) {
+      // Access the raw WS from the internal connector via its private field
+      // We use a type assertion since WebSocketConnector doesn't expose its ws
+      const rawWs = (this.internalConnector as unknown as { ws: import("ws").default | null }).ws;
+      if (rawWs) {
+        this.socketIOHandler = new SocketIOHandler(
+          rawWs,
+          this.discoveryResult.socketIoConfig
+        );
+        this.socketIOHandler.start();
+      }
+    }
+
+    this._connected = true;
+  }
+
+  /**
+   * Disconnect from the WebSocket and clean up resources.
+   */
+  async disconnect(): Promise<void> {
+    if (this.socketIOHandler) {
+      this.socketIOHandler.stop();
+      this.socketIOHandler = null;
+    }
+
+    if (this.internalConnector) {
+      await this.internalConnector.disconnect();
+      this.internalConnector = null;
+    }
+
+    if (!this.protocolConfig?.session?.keepBrowserAlive) {
+      await BrowserDiscoveryService.closeBrowser();
+    }
+
+    this._connected = false;
+    this.discoveryResult = null;
+  }
+
+  /**
+   * Check if the connector is currently connected.
+   */
+  isConnected(): boolean {
+    return this._connected && (this.internalConnector?.isConnected() ?? false);
+  }
+
+  /**
+   * Send a message through the WebSocket connection.
+   *
+   * In Socket.IO mode, encodes the message as a Socket.IO EVENT frame.
+   * In raw mode, delegates directly to the internal WebSocketConnector.
+   */
+  async sendMessage(
+    message: string,
+    metadata?: MessageMetadata
+  ): Promise<ConnectorResponse> {
+    if (!this._connected || !this.internalConnector) {
+      throw new ConnectorError("BrowserWebSocketConnector is not connected");
+    }
+
+    if (this.socketIOHandler && this.discoveryResult?.detectedProtocol === "socket.io") {
+      // Socket.IO mode: encode the message
+      const payload = this.applyRequestTemplate(message);
+      const encoded = SocketIOHandler.encodeMessage("message", payload);
+
+      // Send the raw encoded frame through the internal connector's WS
+      const rawWs = (this.internalConnector as unknown as { ws: import("ws").default | null }).ws;
+      if (!rawWs) {
+        throw new ConnectorError("Internal WebSocket is not available");
+      }
+
+      const startTime = Date.now();
+
+      return new Promise<ConnectorResponse>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new ConnectorError("Socket.IO message timeout"));
+        }, this.config.timeout || 30_000);
+
+        // Listen for the next Socket.IO message frame as response
+        const onMessage = (data: import("ws").RawData) => {
+          const frame = data.toString();
+          if (SocketIOHandler.isMessageFrame(frame)) {
+            clearTimeout(timeout);
+            rawWs.removeListener("message", onMessage);
+
+            const decoded = SocketIOHandler.decodeMessage(frame);
+            const content = decoded
+              ? typeof decoded.data === "string"
+                ? decoded.data
+                : JSON.stringify(decoded.data)
+              : frame;
+
+            resolve({
+              content,
+              metadata: {
+                responseTimeMs: Date.now() - startTime,
+                rawResponse: decoded,
+              },
+            });
+          }
+        };
+
+        rawWs.on("message", onMessage);
+
+        rawWs.send(encoded, (error) => {
+          if (error) {
+            clearTimeout(timeout);
+            rawWs.removeListener("message", onMessage);
+            reject(new ConnectorError(`Failed to send Socket.IO message: ${error.message}`, error));
+          }
+        });
+      });
+    }
+
+    // Raw mode: delegate directly
+    return this.internalConnector.sendMessage(message, metadata);
+  }
+
+  /**
+   * WebSocket connections inherently support streaming.
+   */
+  supportsStreaming(): boolean {
+    return true;
+  }
+
+  /**
+   * Check the health of the WebSocket connection.
+   * If unhealthy and the session is expired, trigger rediscovery.
+   */
+  async healthCheck(): Promise<HealthStatus> {
+    if (!this.internalConnector) {
+      return {
+        healthy: false,
+        error: "Not connected",
+        timestamp: new Date(),
+      };
+    }
+
+    const health = await this.internalConnector.healthCheck();
+
+    if (!health.healthy && this.discoveryResult) {
+      // Check if the session has expired
+      const maxAge = this.protocolConfig?.session?.maxAge ?? 300_000;
+      const elapsed = Date.now() - this.discoveryResult.discoveredAt.getTime();
+
+      if (elapsed >= maxAge) {
+        try {
+          await this.rediscover();
+          return {
+            healthy: true,
+            latencyMs: health.latencyMs,
+            timestamp: new Date(),
+          };
+        } catch (error) {
+          return {
+            healthy: false,
+            error: `Rediscovery failed: ${(error as Error).message}`,
+            timestamp: new Date(),
+          };
+        }
+      }
+    }
+
+    return health;
+  }
+
+  /**
+   * Re-run browser discovery and reconnect.
+   */
+  private async rediscover(): Promise<void> {
+    // Disconnect current connection
+    if (this.socketIOHandler) {
+      this.socketIOHandler.stop();
+      this.socketIOHandler = null;
+    }
+    if (this.internalConnector) {
+      await this.internalConnector.disconnect();
+      this.internalConnector = null;
+    }
+
+    this._connected = false;
+
+    // Reconnect
+    await this.connect();
+  }
+
+  /**
+   * Build a ConnectorConfig for the internal WebSocketConnector from discovery results.
+   */
+  private buildInternalConfig(result: DiscoveryResult): ConnectorConfig {
+    // Merge discovered upgrade headers with cookie header
+    const headers: Record<string, string> = { ...result.headers };
+
+    const cookieHeader = CredentialExtractor.buildCookieHeader(result.cookies);
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+
+    return {
+      endpoint: result.wssUrl,
+      authType: "CUSTOM_HEADER",
+      authConfig: { headers },
+      requestTemplate: this.config.requestTemplate,
+      responseTemplate: this.config.responseTemplate,
+      timeout: this.config.timeout,
+      retries: this.config.retries,
+    };
+  }
+}
+
+// Auto-register with ConnectorRegistry
+ConnectorRegistry.register("BROWSER_WEBSOCKET", BrowserWebSocketConnector);
