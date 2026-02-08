@@ -410,14 +410,14 @@ Install models with \`ollama pull <model>\`:
       },
     ],
     requestTemplate: {
-      messagePath: "",
+      messagePath: "message",
       structure: {
         message: "{{message}}",
       },
     },
     responseTemplate: {
-      responsePath: "",
-      errorPath: "",
+      responsePath: "response",
+      errorPath: "error",
     },
     documentation: `## Custom HTTP Endpoint
 
@@ -589,7 +589,11 @@ Use this preset when:
 - You don't know the direct WebSocket URL
 - The chatbot requires cookies or session tokens obtained via browser navigation
 - The widget is embedded in a complex page with dynamic loading`,
-    exampleResponse: {},
+    exampleResponse: {
+      data: {
+        content: "Hello! I'm the chatbot assistant. How can I help you today?",
+      },
+    },
   },
 
   // 10. Browser WebSocket (Socket.IO)
@@ -625,7 +629,11 @@ Use this preset when:
 - You know the chatbot uses Socket.IO
 - The auto-detect preset misidentifies the protocol
 - You need explicit control over Socket.IO version (v3 vs v4)`,
-    exampleResponse: {},
+    exampleResponse: {
+      data: {
+        content: "Hello! I'm the Socket.IO chatbot. How can I help you today?",
+      },
+    },
   },
 ];
 

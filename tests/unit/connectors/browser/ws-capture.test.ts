@@ -245,8 +245,8 @@ describe("WebSocketCapture", () => {
       page._emit("websocket", ws);
 
       // Simulate frames.
-      ws._emit("frameSent", { payload: '{"type":"hello"}' });
-      ws._emit("frameReceived", { payload: '{"type":"welcome"}' });
+      ws._emit("framesent", { payload: '{"type":"hello"}' });
+      ws._emit("framereceived", { payload: '{"type":"welcome"}' });
 
       const connections = capture.getCapturedConnections();
       expect(connections).toHaveLength(1);
@@ -269,8 +269,8 @@ describe("WebSocketCapture", () => {
       page._emit("websocket", ws1);
       page._emit("websocket", ws2);
 
-      ws1._emit("frameSent", { payload: "frame-from-ws1" });
-      ws2._emit("frameReceived", { payload: "frame-from-ws2" });
+      ws1._emit("framesent", { payload: "frame-from-ws1" });
+      ws2._emit("framereceived", { payload: "frame-from-ws2" });
 
       expect(capture.getCapturedConnections()).toHaveLength(2);
       expect(capture.getConnection(0)!.url).toBe("wss://example.com/ws1");
@@ -287,7 +287,7 @@ describe("WebSocketCapture", () => {
       const ws = createMockWs("wss://example.com/ws");
       page._emit("websocket", ws);
 
-      ws._emit("frameSent", { payload: Buffer.from("binary-data") });
+      ws._emit("framesent", { payload: Buffer.from("binary-data") });
 
       const conn = capture.getConnection(0);
       expect(conn).toBeDefined();
@@ -303,7 +303,7 @@ describe("WebSocketCapture", () => {
       page._emit("websocket", ws);
 
       const before = Date.now();
-      ws._emit("frameReceived", { payload: "data" });
+      ws._emit("framereceived", { payload: "data" });
       const after = Date.now();
 
       const frame = capture.getConnection(0)!.frames[0];
@@ -367,7 +367,7 @@ describe("WebSocketCapture", () => {
       });
 
       // Headers are backfilled on the next received frame.
-      ws._emit("frameReceived", { payload: "data" });
+      ws._emit("framereceived", { payload: "data" });
 
       expect(capture.getConnection(0)!.headers).toEqual({
         Authorization: "Bearer tok",
@@ -388,8 +388,8 @@ describe("WebSocketCapture", () => {
       // Pre-populate a connection with frames.
       const ws = createMockWs("wss://example.com/socket.io/?EIO=4");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "frame1" });
-      ws._emit("frameReceived", { payload: "frame2" });
+      ws._emit("framereceived", { payload: "frame1" });
+      ws._emit("framereceived", { payload: "frame2" });
 
       const result = await capture.waitForWebSocket({
         urlPattern: "socket\\.io",
@@ -407,14 +407,14 @@ describe("WebSocketCapture", () => {
 
       const ws = createMockWs("wss://example.com/ws");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "frame1" });
+      ws._emit("framereceived", { payload: "frame1" });
 
       // Start waiting (needs 2 frames but only 1 exists).
       const promise = capture.waitForWebSocket({ timeout: 2000, minFrames: 2 });
 
       // Add second frame after a short delay.
       setTimeout(() => {
-        ws._emit("frameReceived", { payload: "frame2" });
+        ws._emit("framereceived", { payload: "frame2" });
       }, 150);
 
       const result = await promise;
@@ -438,8 +438,8 @@ describe("WebSocketCapture", () => {
 
       const ws = createMockWs("wss://example.com/other-ws");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "f1" });
-      ws._emit("frameReceived", { payload: "f2" });
+      ws._emit("framereceived", { payload: "f1" });
+      ws._emit("framereceived", { payload: "f2" });
 
       await expect(
         capture.waitForWebSocket({
@@ -456,7 +456,7 @@ describe("WebSocketCapture", () => {
 
       const ws = createMockWs("wss://example.com/ws");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "only-one" });
+      ws._emit("framereceived", { payload: "only-one" });
 
       await expect(
         capture.waitForWebSocket({ timeout: 200, minFrames: 5 }),
@@ -473,12 +473,12 @@ describe("WebSocketCapture", () => {
       const ws2 = createMockWs("wss://example.com/ws/2");
 
       page._emit("websocket", ws1);
-      ws1._emit("frameReceived", { payload: "a" });
-      ws1._emit("frameReceived", { payload: "b" });
+      ws1._emit("framereceived", { payload: "a" });
+      ws1._emit("framereceived", { payload: "b" });
 
       page._emit("websocket", ws2);
-      ws2._emit("frameReceived", { payload: "c" });
-      ws2._emit("frameReceived", { payload: "d" });
+      ws2._emit("framereceived", { payload: "c" });
+      ws2._emit("framereceived", { payload: "d" });
 
       const result = await capture.waitForWebSocket({
         urlPattern: "example\\.com/ws",
@@ -496,8 +496,8 @@ describe("WebSocketCapture", () => {
 
       const ws = createMockWs("wss://example.com/ws");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "f1" });
-      ws._emit("frameReceived", { payload: "f2" });
+      ws._emit("framereceived", { payload: "f1" });
+      ws._emit("framereceived", { payload: "f2" });
 
       // Should return the first connection with defaults (index=0, minFrames=2).
       const result = await capture.waitForWebSocket({ timeout: 1000 });
@@ -511,8 +511,8 @@ describe("WebSocketCapture", () => {
 
       const ws = createMockWs("wss://example.com/other");
       page._emit("websocket", ws);
-      ws._emit("frameReceived", { payload: "f1" });
-      ws._emit("frameReceived", { payload: "f2" });
+      ws._emit("framereceived", { payload: "f1" });
+      ws._emit("framereceived", { payload: "f2" });
 
       try {
         await capture.waitForWebSocket({

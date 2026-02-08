@@ -146,10 +146,11 @@ function createConfig(overrides: Partial<BrowserWebSocketProtocolConfig> = {}): 
 }
 
 function createOptions(overrides: Partial<BrowserDiscoveryOptions> = {}): BrowserDiscoveryOptions {
+  const { config: configOverrides, ...rest } = overrides;
   return {
-    config: createConfig(overrides.config as Partial<BrowserWebSocketProtocolConfig>),
+    config: configOverrides ?? createConfig(),
     targetId: "target-1",
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -206,7 +207,7 @@ describe("BrowserDiscoveryService", () => {
 
     it("should use custom TTL from session.maxAge", async () => {
       const options = createOptions({
-        config: createConfig({ session: { maxAge: 120_000 } }) as unknown as Partial<BrowserWebSocketProtocolConfig>,
+        config: createConfig({ session: { maxAge: 120_000 } }),
       });
 
       await BrowserDiscoveryService.discover(options);

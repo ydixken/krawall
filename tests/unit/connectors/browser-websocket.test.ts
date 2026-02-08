@@ -122,7 +122,7 @@ vi.mock("@/lib/connectors/browser/socketio-handler", () => {
   const SocketIOHandler = vi.fn().mockImplementation(() => ({
     start: mockStart,
     stop: mockStop,
-  }));
+  })) as ReturnType<typeof vi.fn> & Record<string, ReturnType<typeof vi.fn>>;
   // Static methods used by BrowserWebSocketConnector
   SocketIOHandler.encodeMessage = vi.fn().mockImplementation(
     (eventName: string, payload: unknown) => `42${JSON.stringify([eventName, payload])}`

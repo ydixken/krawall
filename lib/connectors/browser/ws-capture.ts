@@ -110,7 +110,7 @@ export class WebSocketCapture {
       this.capturedConnections.push(captured);
 
       // Capture sent frames.
-      ws.on("frameSent", (data: { payload: string | Buffer }) => {
+      ws.on("framesent", (data: { payload: string | Buffer }) => {
         const frame: CapturedFrame = {
           direction: "sent",
           data: typeof data.payload === "string" ? data.payload : data.payload.toString("utf-8"),
@@ -120,7 +120,7 @@ export class WebSocketCapture {
       });
 
       // Capture received frames.
-      ws.on("frameReceived", (data: { payload: string | Buffer }) => {
+      ws.on("framereceived", (data: { payload: string | Buffer }) => {
         const frame: CapturedFrame = {
           direction: "received",
           data: typeof data.payload === "string" ? data.payload : data.payload.toString("utf-8"),

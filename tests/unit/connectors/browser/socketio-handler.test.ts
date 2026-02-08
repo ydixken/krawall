@@ -14,7 +14,7 @@ import { EventEmitter } from "events";
  * and incoming `message` events.
  */
 class MockWebSocket extends EventEmitter {
-  readyState = WebSocket.OPEN;
+  readyState: number = WebSocket.OPEN;
   sent: string[] = [];
 
   send(data: string, _cb?: (err?: Error) => void) {
